@@ -1,0 +1,12 @@
+{
+  "name": "higala-ai-functions",
+  "private": true,
+  "version": "1.0.0",
+  "main": "lib/index.js",
+  "engines": {
+    "node": "22"
+  },
+  "dependencies": {
+    "firebase-functions": "^7.4.0"
+  }
+}

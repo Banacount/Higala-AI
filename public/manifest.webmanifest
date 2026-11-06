@@ -1,0 +1,17 @@
+{
+  "name": "Higala-AI — a friend who tells you the truth",
+  "short_name": "Higala",
+  "description": "Dialect-aware, radically candid mental health support for Kagay-anons.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F7F5EE",
+  "theme_color": "#0B3B2E",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
