@@ -31,10 +31,12 @@ export function useChat() {
     initialRiskFrom(messages),
   );
 
-  const demoMode = useMemo(
-    () => messages.some((message) => message.demo),
-    [messages],
-  );
+  const demoMode = useMemo(() => {
+    const lastAssistant = [...messages]
+      .reverse()
+      .find((message) => message.role === 'assistant');
+    return Boolean(lastAssistant?.demo);
+  }, [messages]);
 
   const appendMessage = useCallback(
     (message: ChatMessage) => {

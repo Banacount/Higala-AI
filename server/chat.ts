@@ -2,6 +2,7 @@ import {
   GoogleGenAI,
   HarmBlockThreshold,
   HarmCategory,
+  ThinkingLevel,
   Type,
 } from '@google/genai';
 import { buildDemoReply } from '../src/shared/demo.ts';
@@ -19,7 +20,10 @@ import {
   type ToolId,
 } from '../src/shared/types.ts';
 
-const DEFAULT_MODEL = 'gemini-3-flash-preview';
+const DEFAULT_MODEL = 'gemini-3.5-flash';
+const FALLBACK_MODEL = 'gemini-3.5-flash-lite';
+const MAX_ATTEMPTS_PER_MODEL = 2;
+const RETRY_DELAY_MS = 700;
 const MAX_MESSAGES = 20;
 const MAX_MESSAGE_CHARS = 4_000;
 const MAX_TOTAL_CHARS = 24_000;
@@ -156,6 +160,7 @@ function normaliseModelResponse(
       challenge: '',
       suggestedTool: 'none',
       riskLevel: maxRisk(screenedRisk, requestRisk),
+      demo: false,
     };
   }
 
@@ -174,6 +179,124 @@ function normaliseModelResponse(
     riskLevel: maxRisk(screenedRisk, maxRisk(requestRisk, modelRisk)),
     demo: false,
   };
+}
+
+function errorStatus(error: unknown): number | undefined {
+  if (!error || typeof error !== 'object') return undefined;
+  const status = (error as { status?: unknown }).status;
+  return typeof status === 'number' ? status : undefined;
+}
+
+function isRetryable(error: unknown): boolean {
+  const status = errorStatus(error);
+  if (status === 429 || status === 500 || status === 502 || status === 503 || status === 504) {
+    return true;
+  }
+  const message = error instanceof Error ? error.message : String(error);
+  return /UNAVAILABLE|high demand|deadline|timed? ?out|ECONNRESET|ETIMEDOUT|fetch failed|network/i.test(
+    message,
+  );
+}
+
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function generateOnce(
+  ai: GoogleGenAI,
+  model: string,
+  request: ChatApiRequest,
+  riskLevel: RiskLevel,
+): Promise<string> {
+  const response = await ai.models.generateContent({
+    model,
+    contents: toGeminiContents(request.messages),
+    config: {
+      systemInstruction: buildSystemPrompt(request.language, riskLevel),
+      temperature: 0.9,
+      maxOutputTokens: MAX_OUTPUT_TOKENS,
+      // Gemini 3.5 supports thinking levels; minimal keeps chat replies fast
+      // while leaving room for the structured JSON output.
+      thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL },
+      responseMimeType: 'application/json',
+      responseSchema: {
+        type: Type.OBJECT,
+        properties: {
+          message: {
+            type: Type.STRING,
+            description:
+              'The friend-like reply, 100–220 words, ending with one clear question.',
+          },
+          challenge: {
+            type: Type.STRING,
+            description:
+              'One gentle but direct sentence naming the hard truth. Empty string when inappropriate.',
+          },
+          suggestedTool: {
+            type: Type.STRING,
+            enum: TOOL_IDS,
+            description: 'One structured tool to offer next, or none.',
+          },
+          riskLevel: {
+            type: Type.STRING,
+            enum: ['none', 'watch', 'elevated', 'crisis'],
+            description: 'Conservative safety assessment of the user message.',
+          },
+        },
+        required: ['message', 'challenge', 'suggestedTool', 'riskLevel'],
+      },
+      safetySettings: [
+        {
+          category: HarmCategory.HARM_CATEGORY_HARASSMENT,
+          threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
+        },
+        {
+          category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+          threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
+        },
+        {
+          category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+          threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
+        },
+        {
+          category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+          threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
+        },
+      ],
+    },
+  });
+
+  const raw = response.text?.trim();
+  if (!raw) {
+    throw new Error(`Gemini returned an empty response (${model}).`);
+  }
+  return raw;
+}
+
+async function generateWithRetry(
+  ai: GoogleGenAI,
+  model: string,
+  request: ChatApiRequest,
+  riskLevel: RiskLevel,
+): Promise<string> {
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS_PER_MODEL; attempt += 1) {
+    try {
+      return await generateOnce(ai, model, request, riskLevel);
+    } catch (error) {
+      lastError = error;
+      if (attempt === MAX_ATTEMPTS_PER_MODEL || !isRetryable(error)) {
+        throw error;
+      }
+      console.warn(
+        `[higala] Gemini ${model} attempt ${attempt} failed; retrying…`,
+      );
+      await wait(RETRY_DELAY_MS * attempt);
+    }
+  }
+
+  throw lastError;
 }
 
 export async function handleChat(
@@ -195,79 +318,28 @@ export async function handleChat(
     });
   }
 
-  try {
-    const ai = new GoogleGenAI({ apiKey: options.apiKey });
-    const response = await ai.models.generateContent({
-      model: options.model?.trim() || DEFAULT_MODEL,
-      contents: toGeminiContents(request.messages),
-      config: {
-        systemInstruction: buildSystemPrompt(request.language, riskLevel),
-        temperature: 0.9,
-        maxOutputTokens: MAX_OUTPUT_TOKENS,
-        responseMimeType: 'application/json',
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            message: {
-              type: Type.STRING,
-              description:
-                'The friend-like reply, 100–220 words, ending with one clear question.',
-            },
-            challenge: {
-              type: Type.STRING,
-              description:
-                'One gentle but direct sentence naming the hard truth. Empty string when inappropriate.',
-            },
-            suggestedTool: {
-              type: Type.STRING,
-              enum: TOOL_IDS,
-              description: 'One structured tool to offer next, or none.',
-            },
-            riskLevel: {
-              type: Type.STRING,
-              enum: ['none', 'watch', 'elevated', 'crisis'],
-              description: 'Conservative safety assessment of the user message.',
-            },
-          },
-          required: ['message', 'challenge', 'suggestedTool', 'riskLevel'],
-        },
-        safetySettings: [
-          {
-            category: HarmCategory.HARM_CATEGORY_HARASSMENT,
-            threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
-          },
-          {
-            category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-            threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
-          },
-          {
-            category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-            threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
-          },
-          {
-            category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-            threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
-          },
-        ],
-      },
-    });
+  const configuredModel = options.model?.trim() || DEFAULT_MODEL;
+  const models = configuredModel === FALLBACK_MODEL
+    ? [configuredModel]
+    : [configuredModel, FALLBACK_MODEL];
+  const ai = new GoogleGenAI({ apiKey: options.apiKey });
 
-    const raw = response.text?.trim();
-    if (!raw) {
-      throw new Error('Gemini returned an empty response.');
+  for (const model of models) {
+    try {
+      const raw = await generateWithRetry(ai, model, request, riskLevel);
+      return normaliseModelResponse(
+        raw,
+        screen.level,
+        request.riskLevel ?? 'none',
+      );
+    } catch (error) {
+      console.error(`[higala] Gemini request failed (${model}):`, error);
     }
-
-    return normaliseModelResponse(
-      raw,
-      screen.level,
-      request.riskLevel ?? 'none',
-    );
-  } catch (error) {
-    console.error('[higala] Gemini request failed:', error);
-    return buildDemoReply({
-      text: lastUserMessage,
-      language: request.language,
-      riskLevel,
-    });
   }
+
+  return buildDemoReply({
+    text: lastUserMessage,
+    language: request.language,
+    riskLevel,
+  });
 }

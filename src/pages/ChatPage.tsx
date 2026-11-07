@@ -85,7 +85,7 @@ export function ChatPage() {
                 {demoMode ? (
                   <span
                     className="rounded-full bg-sun-soft px-1.5 py-0.5 text-[0.5rem] font-extrabold uppercase tracking-[0.1em] text-[#8a6018]"
-                    title="No Gemini API key configured on this server, so offline demo responses are being used."
+                    title="The latest reply came from the offline demo engine because a live Gemini reply was not available."
                   >
                     Demo
                   </span>
