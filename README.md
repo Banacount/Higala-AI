@@ -62,12 +62,12 @@ Leave `GEMINI_API_KEY` empty. The app runs in **demo mode**: the shared demo eng
 
    ```dotenv
    GEMINI_API_KEY=your-key-here
-   GEMINI_MODEL=gemini-3-flash-preview
+   GEMINI_MODEL=gemini-3.5-flash
    ```
 
 3. Restart `npm run dev`.
 
-`GEMINI_MODEL` is optional. The default is `gemini-3-flash-preview`.
+`GEMINI_MODEL` is optional. The default is `gemini-3.5-flash`. If the configured model is rate-limited or unavailable, the server retries, then falls back to `gemini-3.5-flash-lite` before using demo mode.
 
 ---
 
@@ -117,6 +117,7 @@ Browser
                  ├─ validate input + screen the last user message
                  ├─ Gemini 3 with a JSON response schema
                  │    { message, challenge, suggestedTool, riskLevel }
+                 ├─ retry transient errors, then try gemini-3.5-flash-lite
                  └─ demo reply if no key / Gemini fails
 ```
 
@@ -156,10 +157,10 @@ Paste the key when prompted.
 Optionally set a different model by creating `functions/.env` before deploying:
 
 ```dotenv
-GEMINI_MODEL=gemini-3-flash-preview
+GEMINI_MODEL=gemini-3.5-flash
 ```
 
-The code reads `GEMINI_MODEL` from the function environment. The default is `gemini-3-flash-preview`.
+The code reads `GEMINI_MODEL` from the function environment. The default is `gemini-3.5-flash`.
 
 ### 4. Deploy
 
