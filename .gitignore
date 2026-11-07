@@ -10,3 +10,4 @@ functions/.secret.local
 functions/.env.*
 .DS_Store
 *.log
+*.vim
