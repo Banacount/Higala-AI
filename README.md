@@ -34,8 +34,8 @@ The original brief describes a tool that is not another passive, overly agreeabl
 | Markdown | react-markdown + remark-gfm |
 | AI | Gemini 3 via `@google/genai` |
 | Server (dev) | Vite middleware at `/api/chat` |
-| Server (prod) | Firebase Cloud Function `chat` in `asia-southeast1` |
-| Hosting | Firebase Hosting |
+| Server (prod) | Firebase Cloud Function `chat`, or Vercel Function `api/chat.ts` |
+| Hosting | Firebase Hosting or Vercel |
 
 The Gemini key is **server-side only**. It is read from `GEMINI_API_KEY` by the dev middleware and by the Cloud Function secret in production. It is never exposed as a `VITE_` variable.
 
@@ -88,6 +88,8 @@ Leave `GEMINI_API_KEY` empty. The app runs in **demo mode**: the shared demo eng
 ## Project structure
 
 ```text
+api/
+  chat.ts            Vercel Function adapter for `/api/chat`
 server/
   chat.ts            Shared Gemini handler, validation, safety, demo fallback
   functions.ts       Firebase Function adapter and secret binding
@@ -112,7 +114,8 @@ firebase.json        Hosting rewrites, headers, function config
 Browser
   └─ POST /api/chat
        ├─ Vite dev/preview middleware (local)
-       └─ Firebase Function `chat` (production)
+       ├─ Firebase Function `chat` (Firebase production)
+       └─ Vercel Function `api/chat.ts` (Vercel production)
             └─ handleChat()
                  ├─ validate input + screen the last user message
                  ├─ Gemini 3 with a JSON response schema
@@ -184,6 +187,55 @@ npm run build:functions && firebase deploy --only functions
 ```
 
 ---
+
+## Vercel deployment
+
+Vercel needs a **server-side function** for the Gemini call. The browser only
+knows about `/api/chat`; it must never receive the API key. `api/chat.ts` is that
+function, and Vercel detects it automatically because it lives in the root
+`api/` directory.
+
+1. Import the repository in Vercel. The Vite preset builds the client into
+   `dist/`; no build override is required.
+2. In **Project Settings → Environment Variables**, add:
+   - `GEMINI_API_KEY` — your Gemini key. **Do not** prefix it with `VITE_`.
+   - `GEMINI_MODEL` — optional; defaults to `gemini-3.5-flash`.
+3. Apply the variables to **Production**, **Preview**, and **Development**.
+4. Redeploy. Environment variable changes only take effect on a new deployment.
+
+Verify the function directly:
+
+```bash
+curl -i https://your-app.vercel.app/api/chat \
+  -H 'Content-Type: application/json' \
+  -d '{"language":"en","riskLevel":"none","messages":[{"role":"user","content":"Hello"}]}'
+```
+
+A working deployment returns `application/json` with a `message` and
+`"demo": false`. If it returns `text/html` (the SPA shell), the function was not
+built or deployed.
+
+`vercel.json` keeps the SPA catch-all rewrite, but Vercel checks the filesystem
+and deployed functions before applying rewrites, so `api/chat.ts` is not
+shadowed by `/index.html`.
+
+### Server-side protection
+
+The Vercel adapter does not trust the client:
+
+- only `POST` is accepted (`405` otherwise);
+- browser cross-origin calls are rejected (`403`) by comparing `Origin` with the
+  request host;
+- the body must be `application/json` (`415`) and no larger than 1 MB (`413`);
+- each client IP gets a small in-memory rate limit (`429` with `Retry-After`);
+- `GEMINI_API_KEY` stays in the function environment;
+- the shared handler re-validates the payload and re-screens the last user
+  message, taking the maximum of the client's and server's risk assessment.
+
+The in-memory rate limit is per serverless instance, so it is a speed bump, not
+a global quota. For a public production deployment, also enable Vercel's
+platform rate limiting (or put a shared store such as Upstash Redis in front of
+the route).
 
 ## Privacy and data
 
