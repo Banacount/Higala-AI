@@ -17,7 +17,7 @@ export function ChatPage() {
   const [searchParams] = useSearchParams();
   const [draft, setDraft] = useState(() => searchParams.get('prompt') ?? '');
   const [candorOpen, setCandorOpen] = useState(false);
-  const endRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const {
     messages,
     loading,
@@ -36,7 +36,16 @@ export function ChatPage() {
   }, [promptFromUrl]);
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    const pane = scrollRef.current;
+    if (!pane) return;
+    const behavior: ScrollBehavior = window.matchMedia(
+      '(prefers-reduced-motion: reduce)',
+    ).matches
+      ? 'auto'
+      : 'smooth';
+    // Scroll the message pane directly. `scrollIntoView` would also scroll the
+    // page when the pane has no overflow, exposing blank space during replies.
+    pane.scrollTo({ top: pane.scrollHeight, behavior });
   }, [messages.length, loading, error]);
 
   const language =
@@ -69,7 +78,7 @@ export function ChatPage() {
   };
 
   return (
-    <div className="flex h-[calc(100dvh-8rem)] flex-col lg:h-dvh">
+    <div className="flex h-[calc(100dvh-8rem)] flex-col overflow-hidden lg:h-dvh">
       <header className="shrink-0 border-b border-pine-900/8 bg-cream/72 backdrop-blur-xl">
         <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-2 px-4 py-3 sm:px-6">
           <div className="flex min-w-0 items-center gap-2.5">
@@ -121,7 +130,10 @@ export function ChatPage() {
         </div>
       </header>
 
-      <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto bg-gradient-to-b from-transparent via-transparent to-pine-50/45">
+      <div
+        ref={scrollRef}
+        className="scrollbar-thin relative min-h-0 flex-1 overflow-y-auto overscroll-contain bg-gradient-to-b from-transparent via-transparent to-pine-50/45"
+      >
         <div
           className="mx-auto flex w-full max-w-3xl flex-col px-4 py-5 sm:px-6 sm:py-7"
           aria-live="polite"
@@ -174,8 +186,6 @@ export function ChatPage() {
               </button>
             </div>
           ) : null}
-
-          <div ref={endRef} className="h-1" />
         </div>
       </div>
 
