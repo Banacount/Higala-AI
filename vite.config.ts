@@ -3,7 +3,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { defineConfig, loadEnv, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
-import { handleChat } from './server/chat.ts';
+import { ChatValidationError, handleChat } from './server/chat.ts';
 
 const MAX_BODY_BYTES = 1_000_000;
 
@@ -59,9 +59,16 @@ function chatApiPlugin(env: Record<string, string>): Plugin {
       res.setHeader('Cache-Control', 'no-store');
       res.end(JSON.stringify(result));
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Something went wrong.';
-      res.statusCode = 400;
+      // Validation and malformed-body problems are the caller's fault; a live
+      // model failure is a server problem and should not look like a 400.
+      const isClientError =
+        error instanceof ChatValidationError || error instanceof SyntaxError;
+      const message = isClientError
+        ? error instanceof Error
+          ? error.message
+          : 'Something went wrong.'
+        : 'The support service is unavailable right now.';
+      res.statusCode = isClientError ? 400 : 500;
       res.setHeader('Content-Type', 'application/json');
       res.end(JSON.stringify({ error: message }));
     }

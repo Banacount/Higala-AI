@@ -72,14 +72,9 @@ export function ChatBubble({ message }: { message: ChatMessage }) {
           </div>
 
           {message.challenge ? (
-            <div className="mt-3 rounded-r-xl border-l-[3px] border-sun bg-sun-soft/65 px-3 py-2">
-              <p className="text-[0.57rem] font-extrabold uppercase tracking-[0.16em] text-[#8a6018]">
-                The honest part
-              </p>
-              <p className="mt-1 text-xs leading-relaxed text-[#6b4a12]">
-                {message.challenge}
-              </p>
-            </div>
+            <p className="mt-2.5 border-l-2 border-sun/70 pl-3 text-[0.82rem] leading-relaxed text-pine-900/80">
+              {message.challenge}
+            </p>
           ) : null}
 
           {tool ? (

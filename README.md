@@ -11,13 +11,14 @@ The original brief describes a tool that is not another passive, overly agreeabl
 
 ## What it does
 
+- **Conversations that sound human** — replies follow the user's length, language, and mood instead of a template. Higala listens before advising, avoids stock therapy phrases, and asks a question only when it actually helps.
 - **No-yes-man conversations** — the agent can gently push back, name avoidance or harmful behaviour, and ask for a concrete next step instead of offering empty reassurance.
-- **Dialect-aware replies** — Kagay-anon Cebuano, natural Filipino, or English, selected in Settings or in the chat header.
+- **Dialect-aware replies** — Kagay-anon Cebuano, natural Filipino, or English, selected in Settings or in the chat header. Code-switching follows the way the user writes.
 - **Crisis-first safety** — client-side and server-side screening catch direct self-harm and suicide language. A crisis strip, one-tap crisis modal, and verified Philippine hotlines are always within reach.
 - **Structured psychological tools** — box breathing, 5-4-3-2-1 grounding, CBT thought records, a 90-second anger pause, a safety plan, and a mood check-in.
 - **Mood tracking** — daily check-ins, tags, notes, a 7-day chart, a streak, and a plain-language read on the week.
 - **Local-first privacy** — profile, moods, thought records, safety plan, and chat history live in `localStorage`. There is no account and no database.
-- **Offline/demo mode** — without a Gemini API key, a rule-based Higala response engine keeps the app usable and testable.
+- **Offline/demo mode** — without a Gemini API key, a rule-based Higala response engine keeps the app usable and testable. These replies are labelled `Demo`, never passed off as live AI.
 - **Data ownership** — export everything as JSON or clear individual data types (or everything) from Settings.
 
 ---
@@ -67,7 +68,7 @@ Leave `GEMINI_API_KEY` empty. The app runs in **demo mode**: the shared demo eng
 
 3. Restart `npm run dev`.
 
-`GEMINI_MODEL` is optional. The default is `gemini-3.5-flash`. If the configured model is rate-limited or unavailable, the server retries, then falls back to `gemini-3.5-flash-lite` before using demo mode.
+`GEMINI_MODEL` is optional. The default is `gemini-3.5-flash`. If the configured model is rate-limited or unavailable, the server retries, then falls back to `gemini-3.5-flash-lite`. If every live attempt fails, the app tells the user the live service is unavailable and labels any offline reply as `Demo` instead of quietly swapping in a scripted answer.
 
 ---
 
@@ -91,7 +92,7 @@ Leave `GEMINI_API_KEY` empty. The app runs in **demo mode**: the shared demo eng
 api/
   chat.ts            Vercel Function adapter for `/api/chat`
 server/
-  chat.ts            Shared Gemini handler, validation, safety, demo fallback
+  chat.ts            Shared Gemini handler, validation, safety, offline fallback
   functions.ts       Firebase Function adapter and secret binding
 src/
   components/        Layout, chat, tools, home cards, UI primitives

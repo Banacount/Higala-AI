@@ -27,7 +27,7 @@ const RETRY_DELAY_MS = 700;
 const MAX_MESSAGES = 20;
 const MAX_MESSAGE_CHARS = 4_000;
 const MAX_TOTAL_CHARS = 24_000;
-const MAX_OUTPUT_TOKENS = 1_400;
+const MAX_OUTPUT_TOKENS = 900;
 
 export class ChatValidationError extends Error {
   constructor(message: string) {
@@ -213,7 +213,7 @@ async function generateOnce(
     contents: toGeminiContents(request.messages),
     config: {
       systemInstruction: buildSystemPrompt(request.language, riskLevel),
-      temperature: 0.9,
+      temperature: 0.85,
       maxOutputTokens: MAX_OUTPUT_TOKENS,
       // Gemini 3.5 supports thinking levels; minimal keeps chat replies fast
       // while leaving room for the structured JSON output.
@@ -225,25 +225,27 @@ async function generateOnce(
           message: {
             type: Type.STRING,
             description:
-              'The friend-like reply, 100–220 words, ending with one clear question.',
+              'The natural friend-like reply. Usually one to four sentences; longer only when the moment genuinely needs room. No headings or bullet lists in ordinary conversation. Not every reply ends with a question.',
           },
           challenge: {
             type: Type.STRING,
             description:
-              'One gentle but direct sentence naming the hard truth. Empty string when inappropriate.',
+              'Optional. One short, specific, respectful sentence of honesty, used only when it adds something the message did not already say. Omit or use an empty string otherwise. Never shame, moralise, or repeat the message.',
           },
           suggestedTool: {
             type: Type.STRING,
             enum: TOOL_IDS,
-            description: 'One structured tool to offer next, or none.',
+            description:
+              'Optional. One structured tool to offer, only when it genuinely fits. Default to none.',
           },
           riskLevel: {
             type: Type.STRING,
             enum: ['none', 'watch', 'elevated', 'crisis'],
-            description: 'Conservative safety assessment of the user message.',
+            description:
+              'Conservative safety assessment of the user message. Safety takes priority over tone and candor.',
           },
         },
-        required: ['message', 'challenge', 'suggestedTool', 'riskLevel'],
+        required: ['message', 'riskLevel'],
       },
       safetySettings: [
         {
@@ -337,9 +339,7 @@ export async function handleChat(
     }
   }
 
-  return buildDemoReply({
-    text: lastUserMessage,
-    language: request.language,
-    riskLevel,
-  });
+  // Every live model attempt failed. Do not quietly swap in a scripted reply:
+  // the client surfaces the failure and labels any offline fallback clearly.
+  throw new Error('Higala could not reach the live AI service.');
 }
