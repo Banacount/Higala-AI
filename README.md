@@ -13,7 +13,7 @@ The original brief describes a tool that is not another passive, overly agreeabl
 
 - **Conversations that sound human** — replies follow the user's length, language, and mood instead of a template. Higala listens before advising, avoids stock therapy phrases, and asks a question only when it actually helps.
 - **No-yes-man conversations** — the agent can gently push back, name avoidance or harmful behaviour, and ask for a concrete next step instead of offering empty reassurance.
-- **Dialect-aware replies** — Kagay-anon Cebuano, natural Filipino, or English, selected in Settings or in the chat header. Code-switching follows the way the user writes.
+- **Dialect-aware replies** — Kagay-anon Cebuano, natural Filipino, or English, selected in Settings or in the chat header. Code-switching follows the way the user writes, and changing the selector mid-conversation switches the next reply immediately.
 - **Crisis-first safety** — client-side and server-side screening catch direct self-harm and suicide language. A crisis strip, one-tap crisis modal, and verified Philippine hotlines are always within reach.
 - **Structured psychological tools** — box breathing, 5-4-3-2-1 grounding, CBT thought records, a 90-second anger pause, a safety plan, and a mood check-in.
 - **Mood tracking** — daily check-ins, tags, notes, a 7-day chart, a streak, and a plain-language read on the week.

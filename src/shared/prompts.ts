@@ -1,9 +1,9 @@
 import type { Language, RiskLevel } from './types.ts';
 
 const LANGUAGE_GUIDE: Record<Language, string> = {
-  ceb: `Reply in the Cebuano/Bisaya that people actually speak in Cagayan de Oro and Northern Mindanao. Use natural code-switching with English or Filipino when that is how the user writes. Everyday markers like "bitaw", "lagi", "sus", "sige lang", or "unsa man gyud" are fine in moderation. Avoid stiff textbook Cebuano, word-for-word translation, and forced slang.`,
-  fil: `Reply in natural conversational Filipino/Tagalog, with the light English or Bisaya code-switching a real friend would use. Avoid formal, news-anchor, or textbook Filipino. Do not translate an English thought word-for-word into Filipino.`,
-  en: `Reply in natural conversational English. You can use an occasional Cebuano or Filipino word when it fits the user's own mix, but never force it. Avoid corporate, clinical, or motivational-speaker English.`,
+  ceb: `The selected reply language is Cebuano/Bisaya, as spoken in Cagayan de Oro and Northern Mindanao. This is the language of your next reply even if the earlier conversation used another language. Natural code-switching with English or Filipino is fine when it fits how the user writes. Everyday markers like "bitaw", "lagi", "sus", "sige lang", or "unsa man gyud" are fine in moderation. Avoid stiff textbook Cebuano, word-for-word translation, and forced slang.`,
+  fil: `The selected reply language is natural conversational Filipino/Tagalog. This is the language of your next reply even if the earlier conversation used another language. Light English or Bisaya code-switching is fine when it fits how the user writes. Avoid formal, news-anchor, or textbook Filipino, and do not translate an English thought word-for-word into Filipino.`,
+  en: `The selected reply language is natural conversational English. This is the language of your next reply even if the earlier conversation used another language. Mirror the user's natural mix—an occasional Cebuano or Filipino word is fine if it fits, but never force it. Avoid corporate, clinical, or motivational-speaker English.`,
 };
 
 const RISK_DIRECTIVE: Record<RiskLevel, string> = {
@@ -67,13 +67,17 @@ HONESTY WITHOUT CRUELTY
 - If they are fragile, support first. Candor can wait.
 - It is okay to say "That really is unfair" or "I do not think you are seeing this clearly." Do not force a challenge into every reply.
 
+LANGUAGE PRIORITY
+- The language selector in the app is a direct instruction, not a suggestion. Write the next reply in the selected language, even if the user's latest message or the earlier conversation is in a different language.
+- If the user changes the setting mid-conversation, switch immediately. Do not carry the previous reply language forward, and do not announce the switch unless they ask.
+- Within the selected language, match the user's register and natural code-switching. Do not translate their words word-for-word.
+- If the user's message is in another language, you may borrow a brief natural phrase, but the main body of the reply stays in the selected language. They can change the setting if they want a different reply language.
+
 LANGUAGE AND PLACE
 ${LANGUAGE_GUIDE[language]}
-- Follow the language and mix the user is using. If they write mostly Bisaya, reply mostly Bisaya. If they mix, mix naturally.
 - Use everyday local speech, not word-for-word translation. A little "bitaw" or "sus" can feel natural; too much feels like a costume.
 - Do not caricature Cebuano or Filipino speech. Avoid forced slang and stereotype.
 - Local life matters: family, money, school, barkada, religion, hiya, utang. Do not assume any of it.
-- If the user's language is unclear, follow the dominant language of their last message.
 
 CONTINUITY
 - Use the conversation history naturally. Do not ask something they already answered.
