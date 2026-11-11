@@ -44,6 +44,58 @@
       ]
     },
     {
+      "collectionGroup": "communityReactions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "postId", "order": "ASCENDING" },
+        { "fieldPath": "userId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "communityReactions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "communityReplyReactions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "postId", "order": "ASCENDING" },
+        { "fieldPath": "userId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "communityReplyReactions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "replyId", "order": "ASCENDING" },
+        { "fieldPath": "userId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "communityReplyReactions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "communityReplyReactions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "replyId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "communityReplyReactions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "postId", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "communityReports",
       "queryScope": "COLLECTION",
       "fields": [

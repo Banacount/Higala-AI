@@ -4,8 +4,10 @@ import type {
   CommunityModerationQueue,
   CommunityPost,
   CommunityPostList,
+  CommunityReaction,
   CommunityReply,
   CommunityReportReason,
+  ReplyEmoji,
 } from '@/shared/community';
 
 export class CommunityApiError extends Error {
@@ -146,6 +148,54 @@ export function deleteReply(
   token: string,
 ): Promise<{ ok: true }> {
   return communityPost({ action: 'delete-reply', replyId }, token);
+}
+
+export function toggleReaction(
+  input: {
+    postId: string;
+    reaction: CommunityReaction;
+  },
+  token: string,
+): Promise<{
+  ok: boolean;
+  reacted: boolean;
+  reaction: CommunityReaction;
+  reactionCounts: Record<CommunityReaction, number>;
+  myReactions: CommunityReaction[];
+}> {
+  return communityPost(
+    {
+      action: 'toggle-reaction',
+      postId: input.postId,
+      reaction: input.reaction,
+    },
+    token,
+  );
+}
+
+export function toggleReplyReaction(
+  input: {
+    postId: string;
+    replyId: string;
+    emoji: ReplyEmoji;
+  },
+  token: string,
+): Promise<{
+  ok: boolean;
+  reacted: boolean;
+  emoji: ReplyEmoji;
+  reactionCounts: Record<string, number>;
+  myReactions: string[];
+}> {
+  return communityPost(
+    {
+      action: 'toggle-reply-reaction',
+      postId: input.postId,
+      replyId: input.replyId,
+      emoji: input.emoji,
+    },
+    token,
+  );
 }
 
 export async function getCommunityReplies(

@@ -2,10 +2,14 @@ import {
   COMMUNITY_LIMITS,
   isCommunityCategory,
   isCommunityModerationAction,
+  isCommunityReaction,
   isCommunityReportReason,
+  isReplyEmoji,
   type CommunityCategory,
   type CommunityModerationAction,
+  type CommunityReaction,
   type CommunityReportReason,
+  type ReplyEmoji,
 } from '../src/shared/community.ts';
 import { CommunityError } from './communityErrors.ts';
 
@@ -18,6 +22,17 @@ export interface CreatePostInput {
 export interface CreateReplyInput {
   postId: string;
   content: string;
+}
+
+export interface ToggleReactionInput {
+  postId: string;
+  reaction: CommunityReaction;
+}
+
+export interface ToggleReplyReactionInput {
+  postId: string;
+  replyId: string;
+  emoji: ReplyEmoji;
 }
 
 export interface ReportPostInput {
@@ -104,6 +119,25 @@ export function parseCreateReply(body: unknown): CreateReplyInput {
   }
 
   return { postId, content };
+}
+
+export function parseToggleReaction(body: unknown): ToggleReactionInput {
+  const record = asRecord(body);
+  const postId = parsePostId(record.postId);
+  if (!isCommunityReaction(record.reaction)) {
+    throw new CommunityError('Choose a valid supportive reaction.');
+  }
+  return { postId, reaction: record.reaction };
+}
+
+export function parseToggleReplyReaction(body: unknown): ToggleReplyReactionInput {
+  const record = asRecord(body);
+  const postId = parsePostId(record.postId);
+  const replyId = parseReplyId(record.replyId);
+  if (!isReplyEmoji(record.emoji)) {
+    throw new CommunityError('Choose a valid supportive emoji reaction.');
+  }
+  return { postId, replyId, emoji: record.emoji };
 }
 
 export function parsePostId(value: unknown, label = 'Post'): string {

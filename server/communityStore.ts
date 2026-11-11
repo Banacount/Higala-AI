@@ -8,8 +8,11 @@ import {
 } from 'firebase-admin/firestore';
 import {
   COMMUNITY_REACTION_IDS,
+  REPLY_EMOJI_IDS,
   emptyReactionCounts,
   isCommunityCategory,
+  isCommunityReaction,
+  isReplyEmoji,
   type CommunityCategory,
   type CommunityMe,
   type CommunityModerationPost,
@@ -21,6 +24,7 @@ import {
   type CommunityReaction,
   type CommunityReply,
   type CommunityReportReason,
+  type ReplyEmoji,
 } from '../src/shared/community.ts';
 import { isRiskLevel, type RiskLevel } from '../src/shared/types.ts';
 import {
@@ -40,6 +44,8 @@ const POSTS = 'communityPosts';
 const REPORTS = 'communityReports';
 const MEMBERS = 'communityMembers';
 const REPLIES = 'communityReplies';
+const REACTIONS = 'communityReactions';
+const REPLY_REACTIONS = 'communityReplyReactions';
 
 const POST_WINDOW_MS = 10 * 60_000;
 const POST_WINDOW_MAX = 6;
@@ -70,8 +76,24 @@ interface CommunityReplyDoc {
   status?: unknown;
   riskLevel?: unknown;
   needsReview?: unknown;
+  reactionCounts?: unknown;
   createdAt?: unknown;
   updatedAt?: unknown;
+}
+
+interface CommunityReactionDoc {
+  postId?: unknown;
+  userId?: unknown;
+  reactionType?: unknown;
+  createdAt?: unknown;
+}
+
+interface CommunityReplyReactionDoc {
+  replyId?: unknown;
+  postId?: unknown;
+  userId?: unknown;
+  emoji?: unknown;
+  createdAt?: unknown;
 }
 
 interface CommunityReportDoc {
@@ -120,6 +142,21 @@ function readReactionCounts(
   return counts;
 }
 
+function readReplyReactionCounts(
+  value: unknown,
+): Record<string, number> {
+  const counts: Record<string, number> = {};
+  if (!value || typeof value !== 'object') return counts;
+  const record = value as Record<string, unknown>;
+  for (const emoji of REPLY_EMOJI_IDS) {
+    const num = readNumber(record[emoji]);
+    if (num > 0) {
+      counts[emoji] = num;
+    }
+  }
+  return counts;
+}
+
 function readCategory(value: unknown): CommunityCategory | null {
   return isCommunityCategory(value) ? value : null;
 }
@@ -132,6 +169,7 @@ function toPublicPost(
   id: string,
   data: CommunityPostDoc,
   uid: string,
+  myReactions: CommunityReaction[] = [],
 ): CommunityPost {
   return {
     id,
@@ -142,6 +180,7 @@ function toPublicPost(
     updatedAt: timestampMillis(data.updatedAt),
     replyCount: readNumber(data.replyCount),
     reactionCounts: readReactionCounts(data.reactionCounts),
+    myReactions,
     isMine: data.authorId === uid,
   };
 }
@@ -150,6 +189,7 @@ function toPublicReply(
   id: string,
   data: CommunityReplyDoc,
   uid: string,
+  myReactions: string[] = [],
 ): CommunityReply {
   return {
     id,
@@ -157,6 +197,8 @@ function toPublicReply(
     content: readString(data.content),
     createdAt: timestampMillis(data.createdAt),
     isMine: data.authorId === uid,
+    reactionCounts: readReplyReactionCounts(data.reactionCounts),
+    myReactions,
   };
 }
 
@@ -324,8 +366,6 @@ export async function createPost(
     updatedAt: now,
   };
 
-  // Guidelines, per-member rate limit, and the post itself share one
-  // transaction: a create now costs one Firestore round trip instead of three.
   await db.runTransaction(async (transaction) => {
     const memberSnapshot = await transaction.get(memberRef);
     const member = memberSnapshot.data() ?? {};
@@ -375,6 +415,7 @@ export async function createPost(
     updatedAt: now.toMillis(),
     replyCount: 0,
     reactionCounts,
+    myReactions: [],
     isMine: true,
   };
 }
@@ -400,6 +441,7 @@ export async function createReply(
     status: 'visible',
     riskLevel: moderation.riskLevel,
     needsReview: moderation.needsReview,
+    reactionCounts: {},
     createdAt: now,
     updatedAt: now,
   };
@@ -464,6 +506,8 @@ export async function createReply(
     postId: input.postId,
     content: input.content,
     createdAt: now.toMillis(),
+    reactionCounts: {},
+    myReactions: [],
     isMine: true,
   };
 }
@@ -473,12 +517,31 @@ export async function listReplies(
   postId: string,
 ): Promise<CommunityReply[]> {
   const db = getCommunityFirestore();
-  const snapshot = await db
-    .collection(REPLIES)
-    .where('postId', '==', postId)
-    .get();
+  const [repliesSnapshot, userReactionsSnapshot] = await Promise.all([
+    db
+      .collection(REPLIES)
+      .where('postId', '==', postId)
+      .get(),
+    db
+      .collection(REPLY_REACTIONS)
+      .where('postId', '==', postId)
+      .where('userId', '==', uid)
+      .get(),
+  ]);
 
-  const visibleReplies = snapshot.docs
+  const userReactionsByReplyId = new Map<string, string[]>();
+  for (const doc of userReactionsSnapshot.docs) {
+    const data = doc.data() as CommunityReplyReactionDoc;
+    const replyId = readString(data.replyId);
+    const emoji = readString(data.emoji);
+    if (replyId && isReplyEmoji(emoji)) {
+      const list = userReactionsByReplyId.get(replyId) ?? [];
+      list.push(emoji);
+      userReactionsByReplyId.set(replyId, list);
+    }
+  }
+
+  const visibleReplies = repliesSnapshot.docs
     .map((doc) => ({
       id: doc.id,
       data: doc.data() as CommunityReplyDoc,
@@ -490,7 +553,29 @@ export async function listReplies(
       timestampMillis(a.data.createdAt) - timestampMillis(b.data.createdAt),
   );
 
-  return visibleReplies.map(({ id, data }) => toPublicReply(id, data, uid));
+  return visibleReplies.map(({ id, data }) =>
+    toPublicReply(id, data, uid, userReactionsByReplyId.get(id) ?? []),
+  );
+}
+
+async function deleteReplyReactionsForReply(
+  db: Firestore,
+  replyId: string,
+): Promise<void> {
+  for (;;) {
+    const snapshot = await db
+      .collection(REPLY_REACTIONS)
+      .where('replyId', '==', replyId)
+      .limit(100)
+      .get();
+    if (snapshot.empty) break;
+    const batch = db.batch();
+    for (const doc of snapshot.docs) {
+      batch.delete(doc.ref);
+    }
+    await batch.commit();
+    if (snapshot.size < 100) break;
+  }
 }
 
 export async function deleteReply(uid: string, replyId: string): Promise<void> {
@@ -519,6 +604,7 @@ export async function deleteReply(uid: string, replyId: string): Promise<void> {
       status: 'deleted',
       content: '',
       needsReview: false,
+      reactionCounts: {},
       updatedAt: Timestamp.now(),
     });
 
@@ -532,6 +618,175 @@ export async function deleteReply(uid: string, replyId: string): Promise<void> {
       });
     }
   });
+
+  // Clean up any reactions that were on this reply
+  await deleteReplyReactionsForReply(db, replyId);
+}
+
+export async function toggleReplyReaction(
+  uid: string,
+  postId: string,
+  replyId: string,
+  emoji: ReplyEmoji,
+): Promise<{
+  ok: boolean;
+  reacted: boolean;
+  emoji: ReplyEmoji;
+  reactionCounts: Record<string, number>;
+  myReactions: string[];
+}> {
+  const db = getCommunityFirestore();
+  const replyRef = db.collection(REPLIES).doc(replyId);
+  const reactionRef = db
+    .collection(REPLY_REACTIONS)
+    .doc(`${replyId}_${uid}_${encodeURIComponent(emoji)}`);
+
+  let reacted = false;
+  let nextReactionCounts: Record<string, number> = {};
+
+  await db.runTransaction(async (transaction) => {
+    const replySnapshot = await transaction.get(replyRef);
+    if (!replySnapshot.exists) {
+      throw new CommunityNotFoundError('This reply does not exist.');
+    }
+    const replyData = replySnapshot.data() as CommunityReplyDoc;
+    if (readStatus(replyData.status) !== 'visible') {
+      throw new CommunityNotFoundError('This reply is no longer available.');
+    }
+    if (readString(replyData.postId) !== postId) {
+      throw new CommunityError('This reply does not belong to the specified post.');
+    }
+
+    const reactionSnapshot = await transaction.get(reactionRef);
+    const currentCounts = readReplyReactionCounts(replyData.reactionCounts);
+
+    if (reactionSnapshot.exists) {
+      // Toggle off / remove reaction
+      reacted = false;
+      transaction.delete(reactionRef);
+      const updatedCount = Math.max(0, (currentCounts[emoji] ?? 0) - 1);
+      if (updatedCount > 0) {
+        currentCounts[emoji] = updatedCount;
+      } else {
+        delete currentCounts[emoji];
+      }
+    } else {
+      // Add reaction
+      reacted = true;
+      transaction.set(reactionRef, {
+        replyId,
+        postId,
+        userId: uid,
+        emoji,
+        createdAt: Timestamp.now(),
+      });
+      currentCounts[emoji] = (currentCounts[emoji] ?? 0) + 1;
+    }
+
+    transaction.update(replyRef, {
+      reactionCounts: currentCounts,
+      updatedAt: Timestamp.now(),
+    });
+
+    nextReactionCounts = currentCounts;
+  });
+
+  // Query all active reactions by this user for this reply
+  const userReactionsSnapshot = await db
+    .collection(REPLY_REACTIONS)
+    .where('replyId', '==', replyId)
+    .where('userId', '==', uid)
+    .get();
+
+  const myReactions = userReactionsSnapshot.docs
+    .map((doc) => doc.data().emoji)
+    .filter(isReplyEmoji);
+
+  return {
+    ok: true,
+    reacted,
+    emoji,
+    reactionCounts: nextReactionCounts,
+    myReactions,
+  };
+}
+
+export async function toggleReaction(
+  uid: string,
+  postId: string,
+  reaction: CommunityReaction,
+): Promise<{
+  ok: boolean;
+  reacted: boolean;
+  reaction: CommunityReaction;
+  reactionCounts: Record<CommunityReaction, number>;
+  myReactions: CommunityReaction[];
+}> {
+  const db = getCommunityFirestore();
+  const postRef = db.collection(POSTS).doc(postId);
+  const reactionRef = db
+    .collection(REACTIONS)
+    .doc(`${postId}_${uid}_${reaction}`);
+
+  let reacted = false;
+  let nextReactionCounts: Record<CommunityReaction, number> = emptyReactionCounts();
+
+  await db.runTransaction(async (transaction) => {
+    const postSnapshot = await transaction.get(postRef);
+    if (!postSnapshot.exists) {
+      throw new CommunityNotFoundError('This post does not exist.');
+    }
+    const postData = postSnapshot.data() as CommunityPostDoc;
+    if (readStatus(postData.status) !== 'visible') {
+      throw new CommunityNotFoundError('This post is no longer available.');
+    }
+
+    const reactionSnapshot = await transaction.get(reactionRef);
+    const currentCounts = readReactionCounts(postData.reactionCounts);
+
+    if (reactionSnapshot.exists) {
+      // User is toggling off/removing an existing reaction
+      reacted = false;
+      transaction.delete(reactionRef);
+      currentCounts[reaction] = Math.max(0, currentCounts[reaction] - 1);
+    } else {
+      // User is adding a supportive reaction
+      reacted = true;
+      transaction.set(reactionRef, {
+        postId,
+        userId: uid,
+        reactionType: reaction,
+        createdAt: Timestamp.now(),
+      });
+      currentCounts[reaction] = currentCounts[reaction] + 1;
+    }
+
+    transaction.update(postRef, {
+      reactionCounts: currentCounts,
+      updatedAt: Timestamp.now(),
+    });
+
+    nextReactionCounts = currentCounts;
+  });
+
+  // Query all active reactions by this user for this post
+  const userReactionsSnapshot = await db
+    .collection(REACTIONS)
+    .where('postId', '==', postId)
+    .where('userId', '==', uid)
+    .get();
+
+  const myReactions = userReactionsSnapshot.docs
+    .map((doc) => doc.data().reactionType)
+    .filter(isCommunityReaction);
+
+  return {
+    ok: true,
+    reacted,
+    reaction,
+    reactionCounts: nextReactionCounts,
+    myReactions,
+  };
 }
 
 export async function listPosts(
@@ -604,7 +859,18 @@ export async function getPost(
     throw new CommunityNotFoundError();
   }
 
-  return toPublicPost(snapshot.id, data, uid);
+  // Load the current user's reactions for this post
+  const reactionsSnapshot = await db
+    .collection(REACTIONS)
+    .where('postId', '==', postId)
+    .where('userId', '==', uid)
+    .get();
+
+  const myReactions = reactionsSnapshot.docs
+    .map((doc) => doc.data().reactionType)
+    .filter(isCommunityReaction);
+
+  return toPublicPost(snapshot.id, data, uid, myReactions);
 }
 
 async function dismissOpenReportsForPosts(
@@ -654,6 +920,46 @@ async function deleteRepliesForPost(
   }
 }
 
+async function deleteReactionsForPost(
+  db: Firestore,
+  postId: string,
+): Promise<void> {
+  for (;;) {
+    const snapshot = await db
+      .collection(REACTIONS)
+      .where('postId', '==', postId)
+      .limit(100)
+      .get();
+    if (snapshot.empty) break;
+    const batch = db.batch();
+    for (const doc of snapshot.docs) {
+      batch.delete(doc.ref);
+    }
+    await batch.commit();
+    if (snapshot.size < 100) break;
+  }
+}
+
+async function deleteReplyReactionsForPost(
+  db: Firestore,
+  postId: string,
+): Promise<void> {
+  for (;;) {
+    const snapshot = await db
+      .collection(REPLY_REACTIONS)
+      .where('postId', '==', postId)
+      .limit(100)
+      .get();
+    if (snapshot.empty) break;
+    const batch = db.batch();
+    for (const doc of snapshot.docs) {
+      batch.delete(doc.ref);
+    }
+    await batch.commit();
+    if (snapshot.size < 100) break;
+  }
+}
+
 export async function deletePost(uid: string, postId: string): Promise<void> {
   const db = getCommunityFirestore();
   const ref = db.collection(POSTS).doc(postId);
@@ -679,6 +985,7 @@ export async function deletePost(uid: string, postId: string): Promise<void> {
       needsReview: false,
       reportCount: 0,
       replyCount: 0,
+      reactionCounts: emptyReactionCounts(),
       updatedAt: Timestamp.now(),
     });
   });
@@ -686,8 +993,10 @@ export async function deletePost(uid: string, postId: string): Promise<void> {
   // The post is gone, so any open reports about it have nothing left to act on.
   await dismissOpenReportsForPosts(db, [postId]);
 
-  // Clean up replies for this post
+  // Clean up replies, post reactions, and reply reactions for this post
   await deleteRepliesForPost(db, postId);
+  await deleteReactionsForPost(db, postId);
+  await deleteReplyReactionsForPost(db, postId);
 }
 
 export async function reportPost(
@@ -863,9 +1172,11 @@ export async function deleteMyCommunityData(uid: string): Promise<{
   // Reports other people made about these posts have no target anymore.
   await dismissOpenReportsForPosts(db, deletedPostIds);
 
-  // Clean up replies for the deleted posts
+  // Clean up replies, post reactions, and reply reactions for the deleted posts
   for (const postId of deletedPostIds) {
     await deleteRepliesForPost(db, postId);
+    await deleteReactionsForPost(db, postId);
+    await deleteReplyReactionsForPost(db, postId);
   }
 
   // Delete all replies authored by this user, and adjust replyCount on posts by others
@@ -920,6 +1231,120 @@ export async function deleteMyCommunityData(uid: string): Promise<{
       }
     }).catch(() => {
       // Best-effort cleanup
+    });
+  }
+
+  // Delete all post reactions authored by this user, and adjust reactionCounts on posts by others
+  const postReactionDecrements = new Map<string, Record<CommunityReaction, number>>();
+
+  for (;;) {
+    const snapshot = await db
+      .collection(REACTIONS)
+      .where('userId', '==', uid)
+      .limit(100)
+      .get();
+    if (snapshot.empty) break;
+
+    for (const doc of snapshot.docs) {
+      const data = doc.data() as CommunityReactionDoc;
+      const postId = readString(data.postId);
+      const reaction = data.reactionType as CommunityReaction;
+      if (postId && isCommunityReaction(reaction)) {
+        if (!postReactionDecrements.has(postId)) {
+          postReactionDecrements.set(postId, emptyReactionCounts());
+        }
+        const counts = postReactionDecrements.get(postId)!;
+        counts[reaction] = (counts[reaction] ?? 0) + 1;
+      }
+    }
+
+    const batch = db.batch();
+    for (const doc of snapshot.docs) {
+      batch.delete(doc.ref);
+    }
+    await batch.commit();
+
+    if (snapshot.size < 100) break;
+  }
+
+  // Adjust reactionCounts on posts
+  for (const [postId, decrements] of postReactionDecrements.entries()) {
+    if (deletedPostIds.includes(postId)) continue;
+    const postRef = db.collection(POSTS).doc(postId);
+    await db.runTransaction(async (transaction) => {
+      const postSnapshot = await transaction.get(postRef);
+      if (postSnapshot.exists) {
+        const postData = postSnapshot.data() as CommunityPostDoc;
+        const currentCounts = readReactionCounts(postData.reactionCounts);
+        for (const [reaction, dec] of Object.entries(decrements) as [CommunityReaction, number][]) {
+          currentCounts[reaction] = Math.max(0, currentCounts[reaction] - dec);
+        }
+        transaction.update(postRef, {
+          reactionCounts: currentCounts,
+          updatedAt: Timestamp.now(),
+        });
+      }
+    }).catch(() => {
+      // Best-effort
+    });
+  }
+
+  // Delete all reply reactions authored by this user, and adjust reactionCounts on replies by others
+  const replyReactionDecrements = new Map<string, Record<string, number>>();
+
+  for (;;) {
+    const snapshot = await db
+      .collection(REPLY_REACTIONS)
+      .where('userId', '==', uid)
+      .limit(100)
+      .get();
+    if (snapshot.empty) break;
+
+    for (const doc of snapshot.docs) {
+      const data = doc.data() as CommunityReplyReactionDoc;
+      const replyId = readString(data.replyId);
+      const emoji = readString(data.emoji);
+      if (replyId && isReplyEmoji(emoji)) {
+        if (!replyReactionDecrements.has(replyId)) {
+          replyReactionDecrements.set(replyId, {});
+        }
+        const counts = replyReactionDecrements.get(replyId)!;
+        counts[emoji] = (counts[emoji] ?? 0) + 1;
+      }
+    }
+
+    const batch = db.batch();
+    for (const doc of snapshot.docs) {
+      batch.delete(doc.ref);
+    }
+    await batch.commit();
+
+    if (snapshot.size < 100) break;
+  }
+
+  // Adjust reactionCounts on replies
+  for (const [replyId, decrements] of replyReactionDecrements.entries()) {
+    const replyRef = db.collection(REPLIES).doc(replyId);
+    await db.runTransaction(async (transaction) => {
+      const replySnapshot = await transaction.get(replyRef);
+      if (replySnapshot.exists) {
+        const replyData = replySnapshot.data() as CommunityReplyDoc;
+        const currentCounts = readReplyReactionCounts(replyData.reactionCounts);
+        for (const [emoji, dec] of Object.entries(decrements)) {
+          const updated = Math.max(0, (currentCounts[emoji] ?? 0) - dec);
+          if (updated > 0) {
+            currentCounts[emoji] = updated;
+          } else {
+            delete currentCounts[emoji];
+          }
+        }
+        transaction.update(replyRef, {
+          reactionCounts: currentCounts,
+          updatedAt: Timestamp.now(),
+        });
+      }
+    }).catch(() => {
+      // Best-effort
     });
   }
 

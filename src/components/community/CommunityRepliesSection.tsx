@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { CrisisSupportNote } from '@/components/community/CrisisSupportNote';
+import { ReplyEmojiReactions } from '@/components/community/ReplyEmojiReactions';
 import { useAuth } from '@/context/AuthContext';
 import {
   acceptGuidelines as acceptGuidelinesRequest,
@@ -31,8 +32,15 @@ export function CommunityRepliesSection({
   onReplyCountChange,
 }: CommunityRepliesSectionProps) {
   const { getIdToken } = useAuth();
-  const { replies, loading, error: listError, refresh, addReply, removeReply } =
-    useCommunityReplies(postId);
+  const {
+    replies,
+    loading,
+    error: listError,
+    refresh,
+    addReply,
+    removeReply,
+    updateReplyReactions,
+  } = useCommunityReplies(postId);
 
   const [content, setContent] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -174,8 +182,8 @@ export function CommunityRepliesSection({
             <span className="flex h-7 w-7 items-center justify-center rounded-full bg-pine-100 text-[0.66rem] font-extrabold text-pine-700">
               A
             </span>
-            <span className="text-[0.7rem]  uppercase tracking-[0.14em] text-pine-800">
-              Replying as <span className="font-bold">Anonymous</span>
+            <span className="text-[0.7rem] font-bold uppercase tracking-[0.14em] text-pine-800">
+              Replying as Anonymous friend
             </span>
           </div>
           <span className="flex items-center gap-1 text-[0.65rem] font-semibold text-muted">
@@ -315,7 +323,7 @@ export function CommunityRepliesSection({
                       A
                     </span>
                     <span className="text-[0.68rem] font-bold uppercase tracking-[0.14em] text-muted">
-                      Anonymous
+                      Anonymous friend
                     </span>
                     {reply.isMine ? (
                       <span className="rounded-full bg-pine-100 px-2 py-0.5 text-[0.58rem] font-bold uppercase tracking-[0.12em] text-pine-700">
@@ -333,14 +341,25 @@ export function CommunityRepliesSection({
                   {reply.content}
                 </p>
 
-                {reply.isMine ? (
-                  <div className="mt-3 flex justify-end border-t border-pine-900/6 pt-2.5">
+                {/* Reply emoji reactions & self-deletion */}
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-pine-900/6 pt-2">
+                  <ReplyEmojiReactions
+                    postId={postId}
+                    replyId={reply.id}
+                    counts={reply.reactionCounts}
+                    myReactions={reply.myReactions}
+                    onReactionChange={(nextCounts, nextMyReactions) =>
+                      updateReplyReactions(reply.id, nextCounts, nextMyReactions)
+                    }
+                  />
+
+                  {reply.isMine ? (
                     <Button
                       variant="danger"
                       size="sm"
                       onClick={() => void handleDelete(reply)}
                       disabled={isDeleting}
-                      className="text-xs"
+                      className="text-xs ml-auto"
                     >
                       {isDeleting ? (
                         <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
@@ -349,8 +368,8 @@ export function CommunityRepliesSection({
                       )}
                       {isDeleting ? 'Deleting…' : 'Delete'}
                     </Button>
-                  </div>
-                ) : null}
+                  ) : null}
+                </div>
               </article>
             );
           })}

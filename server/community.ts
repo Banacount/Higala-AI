@@ -22,6 +22,8 @@ import {
   listReplies,
   moderatePost,
   reportPost,
+  toggleReaction,
+  toggleReplyReaction,
 } from './communityStore.ts';
 import {
   parseAction,
@@ -33,6 +35,8 @@ import {
   parseReplyId,
   parseReportPost,
   parseResource,
+  parseToggleReaction,
+  parseToggleReplyReaction,
 } from './communityValidation.ts';
 
 /**
@@ -177,6 +181,27 @@ export async function handleCommunity(
           },
           201,
         );
+      }
+
+      case 'toggle-reaction': {
+        const input = parseToggleReaction(body);
+        const result = await toggleReaction(
+          identity.uid,
+          input.postId,
+          input.reaction,
+        );
+        return ok(result);
+      }
+
+      case 'toggle-reply-reaction': {
+        const input = parseToggleReplyReaction(body);
+        const result = await toggleReplyReaction(
+          identity.uid,
+          input.postId,
+          input.replyId,
+          input.emoji,
+        );
+        return ok(result);
       }
 
       case 'delete-post': {

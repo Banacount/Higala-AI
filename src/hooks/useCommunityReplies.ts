@@ -52,6 +52,23 @@ export function useCommunityReplies(postId: string | undefined) {
     setReplies((prev) => prev.filter((r) => r.id !== replyId));
   }, []);
 
+  const updateReplyReactions = useCallback(
+    (
+      replyId: string,
+      reactionCounts: Record<string, number>,
+      myReactions: string[],
+    ) => {
+      setReplies((prev) =>
+        prev.map((r) =>
+          r.id === replyId
+            ? { ...r, reactionCounts, myReactions }
+            : r,
+        ),
+      );
+    },
+    [],
+  );
+
   return {
     replies,
     loading,
@@ -59,6 +76,7 @@ export function useCommunityReplies(postId: string | undefined) {
     refresh: load,
     addReply,
     removeReply,
+    updateReplyReactions,
     setReplies,
   };
 }
