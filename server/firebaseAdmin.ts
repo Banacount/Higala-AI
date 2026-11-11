@@ -30,7 +30,7 @@ function usingEmulator(): boolean {
 }
 
 function readServiceAccount(): ServiceAccount | null {
-  const rawJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+    const rawJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
   if (rawJson) {
     try {
       const parsed = JSON.parse(rawJson) as {
