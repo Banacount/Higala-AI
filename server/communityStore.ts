@@ -16,6 +16,7 @@ import {
   type CommunityCategory,
   type CommunityMe,
   type CommunityModerationPost,
+  type CommunityModerationReply,
   type CommunityModerationQueue,
   type CommunityModerationReport,
   type CommunityPost,
@@ -46,6 +47,7 @@ const MEMBERS = 'communityMembers';
 const REPLIES = 'communityReplies';
 const REACTIONS = 'communityReactions';
 const REPLY_REACTIONS = 'communityReplyReactions';
+const DELETION_POST_TARGETS = 'deletionPostTargets';
 
 const POST_WINDOW_MS = 10 * 60_000;
 const POST_WINDOW_MAX = 6;
@@ -65,6 +67,8 @@ interface CommunityPostDoc {
   reportCount?: unknown;
   replyCount?: unknown;
   reactionCounts?: unknown;
+  cleanupPending?: unknown;
+  cleanupCompletedAt?: unknown;
   createdAt?: unknown;
   updatedAt?: unknown;
 }
@@ -77,6 +81,10 @@ interface CommunityReplyDoc {
   riskLevel?: unknown;
   needsReview?: unknown;
   reactionCounts?: unknown;
+  deletionCountAdjusted?: unknown;
+  deletionCountAdjustedAt?: unknown;
+  reactionCleanupPending?: unknown;
+  reactionCleanupCompletedAt?: unknown;
   createdAt?: unknown;
   updatedAt?: unknown;
 }
@@ -85,6 +93,8 @@ interface CommunityReactionDoc {
   postId?: unknown;
   userId?: unknown;
   reactionType?: unknown;
+  deletionCountAdjusted?: unknown;
+  deletionCountAdjustedAt?: unknown;
   createdAt?: unknown;
 }
 
@@ -93,6 +103,8 @@ interface CommunityReplyReactionDoc {
   postId?: unknown;
   userId?: unknown;
   emoji?: unknown;
+  deletionCountAdjusted?: unknown;
+  deletionCountAdjustedAt?: unknown;
   createdAt?: unknown;
 }
 
@@ -219,6 +231,21 @@ function toModerationPost(
   };
 }
 
+function toModerationReply(
+  id: string,
+  data: CommunityReplyDoc,
+): CommunityModerationReply {
+  return {
+    id,
+    postId: readString(data.postId),
+    content: readString(data.content),
+    createdAt: timestampMillis(data.createdAt),
+    status: readStatus(data.status),
+    riskLevel: isRiskLevel(data.riskLevel) ? data.riskLevel : 'none',
+    needsReview: data.needsReview === true,
+  };
+}
+
 function toModerationReport(
   id: string,
   data: CommunityReportDoc,
@@ -267,6 +294,48 @@ function decodeCursor(
   }
 }
 
+async function assertPostReadableForReplies(
+  uid: string,
+  postId: string,
+  isAdmin: boolean,
+): Promise<void> {
+  const db = getCommunityFirestore();
+  const snapshot = await db.collection(POSTS).doc(postId).get();
+  if (!snapshot.exists) {
+    throw new CommunityNotFoundError();
+  }
+
+  const data = snapshot.data() as CommunityPostDoc;
+  const status = readStatus(data.status);
+  if (status === 'deleted') {
+    throw new CommunityNotFoundError();
+  }
+  if (status === 'hidden' && !isAdmin && data.authorId !== uid) {
+    // Do not reveal hidden content to non-owners.
+    throw new CommunityNotFoundError();
+  }
+}
+
+async function assertMemberCanParticipate(
+  member: Record<string, unknown>,
+): Promise<void> {
+  if (timestampMillis(member.guidelinesAcceptedAt) <= 0) {
+    throw new CommunityError(
+      'Please read and accept the community guidelines before participating.',
+      403,
+      'guidelines_required',
+    );
+  }
+  if (member.deletionState === 'deleting') {
+    throw new CommunityError(
+      'Your community data is being deleted, so new content cannot be created right now.',
+      409,
+      'account_deleting',
+    );
+  }
+  return Promise.resolve();
+}
+
 async function enforceRateLimit(
   db: Firestore,
   uid: string,
@@ -282,6 +351,13 @@ async function enforceRateLimit(
   await db.runTransaction(async (transaction) => {
     const snapshot = await transaction.get(memberRef);
     const data = snapshot.data() ?? {};
+    if (data.deletionState === 'deleting') {
+      throw new CommunityError(
+        'Your community data is being deleted, so new content cannot be created right now.',
+        409,
+        'account_deleting',
+      );
+    }
     const start = timestampMillis(data[startKey]);
     const count = readNumber(data[countKey]);
 
@@ -370,13 +446,7 @@ export async function createPost(
     const memberSnapshot = await transaction.get(memberRef);
     const member = memberSnapshot.data() ?? {};
 
-    if (timestampMillis(member.guidelinesAcceptedAt) <= 0) {
-      throw new CommunityError(
-        'Please read and accept the community guidelines before your first post.',
-        403,
-        'guidelines_required',
-      );
-    }
+    await assertMemberCanParticipate(member);
 
     const windowStart = timestampMillis(member.postWindowStart);
     const windowCount = readNumber(member.postWindowCount);
@@ -438,7 +508,7 @@ export async function createReply(
     authorId: uid,
     postId: input.postId,
     content: input.content,
-    status: 'visible',
+    status: moderation.needsReview ? 'hidden' : 'visible',
     riskLevel: moderation.riskLevel,
     needsReview: moderation.needsReview,
     reactionCounts: {},
@@ -450,13 +520,7 @@ export async function createReply(
     const memberSnapshot = await transaction.get(memberRef);
     const member = memberSnapshot.data() ?? {};
 
-    if (timestampMillis(member.guidelinesAcceptedAt) <= 0) {
-      throw new CommunityError(
-        'Please read and accept the community guidelines before your first reply.',
-        403,
-        'guidelines_required',
-      );
-    }
+    await assertMemberCanParticipate(member);
 
     const postSnapshot = await transaction.get(postRef);
     if (!postSnapshot.exists) {
@@ -493,10 +557,12 @@ export async function createReply(
       { merge: true },
     );
 
-    transaction.update(postRef, {
-      replyCount: FieldValue.increment(1),
-      updatedAt: now,
-    });
+    if (!moderation.needsReview) {
+      transaction.update(postRef, {
+        replyCount: FieldValue.increment(1),
+        updatedAt: now,
+      });
+    }
 
     transaction.create(replyRef, data);
   });
@@ -515,47 +581,82 @@ export async function createReply(
 export async function listReplies(
   uid: string,
   postId: string,
-): Promise<CommunityReply[]> {
-  const db = getCommunityFirestore();
-  const [repliesSnapshot, userReactionsSnapshot] = await Promise.all([
-    db
-      .collection(REPLIES)
-      .where('postId', '==', postId)
-      .get(),
-    db
-      .collection(REPLY_REACTIONS)
-      .where('postId', '==', postId)
-      .where('userId', '==', uid)
-      .get(),
-  ]);
+  isAdmin = false,
+  options?: { cursor?: string | null; limit?: number },
+): Promise<{ replies: CommunityReply[]; nextCursor: string | null }> {
+  await assertPostReadableForReplies(uid, postId, isAdmin);
 
+  const db = getCommunityFirestore();
+  const limit = Math.max(1, Math.min(options?.limit ?? 20, 50));
+  let query = db
+    .collection(REPLIES)
+    .where('postId', '==', postId)
+    .where('status', '==', 'visible')
+    .orderBy('createdAt', 'asc')
+    .orderBy(FieldPath.documentId(), 'asc')
+    .limit(limit + 1);
+
+  const decoded = decodeCursor(options?.cursor ?? null);
+  if (decoded) {
+    const cursorDoc = await db.collection(REPLIES).doc(decoded.id).get();
+    if (
+      cursorDoc.exists &&
+      readString((cursorDoc.data() as CommunityReplyDoc).postId) === postId &&
+      readStatus((cursorDoc.data() as CommunityReplyDoc).status) === 'visible'
+    ) {
+      query = query.startAfter(cursorDoc);
+    }
+    // Unknown/foreign cursors are ignored to avoid leaking or throwing on stale pages.
+  }
+
+  const repliesSnapshot = await query.get();
+  const docs = repliesSnapshot.docs.slice(0, limit);
+  const visibleReplies = docs.map((doc) => ({
+    id: doc.id,
+    data: doc.data() as CommunityReplyDoc,
+  }));
+
+  const replyIds = visibleReplies.map(({ id }) => id);
   const userReactionsByReplyId = new Map<string, string[]>();
-  for (const doc of userReactionsSnapshot.docs) {
-    const data = doc.data() as CommunityReplyReactionDoc;
-    const replyId = readString(data.replyId);
-    const emoji = readString(data.emoji);
-    if (replyId && isReplyEmoji(emoji)) {
-      const list = userReactionsByReplyId.get(replyId) ?? [];
-      list.push(emoji);
-      userReactionsByReplyId.set(replyId, list);
+  if (replyIds.length > 0) {
+    for (let index = 0; index < replyIds.length; index += 30) {
+      const chunk = replyIds.slice(index, index + 30);
+      const userReactionsSnapshot = await db
+        .collection(REPLY_REACTIONS)
+        .where('postId', '==', postId)
+        .where('userId', '==', uid)
+        .where('replyId', 'in', chunk)
+        .get();
+
+      for (const doc of userReactionsSnapshot.docs) {
+        const data = doc.data() as CommunityReplyReactionDoc;
+        const replyId = readString(data.replyId);
+        const emoji = readString(data.emoji);
+        if (replyId && isReplyEmoji(emoji)) {
+          const list = userReactionsByReplyId.get(replyId) ?? [];
+          list.push(emoji);
+          userReactionsByReplyId.set(replyId, list);
+        }
+      }
     }
   }
 
-  const visibleReplies = repliesSnapshot.docs
-    .map((doc) => ({
-      id: doc.id,
-      data: doc.data() as CommunityReplyDoc,
-    }))
-    .filter(({ data }) => readStatus(data.status) === 'visible');
+  const nextCursor =
+    repliesSnapshot.docs.length > limit && visibleReplies.length > 0
+      ? encodeCursor(
+          timestampMillis(
+            visibleReplies[visibleReplies.length - 1].data.createdAt,
+          ),
+          visibleReplies[visibleReplies.length - 1].id,
+        )
+      : null;
 
-  visibleReplies.sort(
-    (a, b) =>
-      timestampMillis(a.data.createdAt) - timestampMillis(b.data.createdAt),
-  );
-
-  return visibleReplies.map(({ id, data }) =>
-    toPublicReply(id, data, uid, userReactionsByReplyId.get(id) ?? []),
-  );
+  return {
+    replies: visibleReplies.map(({ id, data }) =>
+      toPublicReply(id, data, uid, userReactionsByReplyId.get(id) ?? []),
+    ),
+    nextCursor,
+  };
 }
 
 async function deleteReplyReactionsForReply(
@@ -582,7 +683,7 @@ export async function deleteReply(uid: string, replyId: string): Promise<void> {
   const db = getCommunityFirestore();
   const replyRef = db.collection(REPLIES).doc(replyId);
 
-  await db.runTransaction(async (transaction) => {
+  const result = await db.runTransaction(async (transaction) => {
     const snapshot = await transaction.get(replyRef);
     if (!snapshot.exists) {
       throw new CommunityNotFoundError();
@@ -592,35 +693,53 @@ export async function deleteReply(uid: string, replyId: string): Promise<void> {
       // Do not reveal whether someone else's reply exists.
       throw new CommunityNotFoundError();
     }
-    if (readStatus(data.status) === 'deleted') {
+    const status = readStatus(data.status);
+    if (status === 'deleted' && data.reactionCleanupPending !== true) {
       throw new CommunityNotFoundError();
     }
 
-    const postId = readString(data.postId);
-    const postRef = db.collection(POSTS).doc(postId);
-    const postSnapshot = await transaction.get(postRef);
+    if (status !== 'deleted') {
+      const postId = readString(data.postId);
+      const postRef = db.collection(POSTS).doc(postId);
+      const postSnapshot = await transaction.get(postRef);
 
-    transaction.update(replyRef, {
-      status: 'deleted',
-      content: '',
-      needsReview: false,
-      reactionCounts: {},
-      updatedAt: Timestamp.now(),
-    });
+      const wasPublic = status === 'visible' && data.needsReview !== true;
 
-    if (postSnapshot.exists) {
-      const currentReplyCount = readNumber(
-        (postSnapshot.data() as CommunityPostDoc).replyCount,
-      );
-      transaction.update(postRef, {
-        replyCount: Math.max(0, currentReplyCount - 1),
+      transaction.update(replyRef, {
+        status: 'deleted',
+        content: '',
+        needsReview: false,
+        reactionCounts: {},
+        reactionCleanupPending: true,
         updatedAt: Timestamp.now(),
       });
+
+      if (wasPublic && postSnapshot.exists) {
+        transaction.update(postRef, {
+          replyCount: FieldValue.increment(-1),
+          updatedAt: Timestamp.now(),
+        });
+      }
     }
+
+    return { cleanup: true as const };
   });
 
-  // Clean up any reactions that were on this reply
-  await deleteReplyReactionsForReply(db, replyId);
+  if (result.cleanup) {
+    await deleteReplyReactionsForReply(db, replyId);
+    await replyRef
+      .set(
+        {
+          reactionCleanupPending: false,
+          reactionCleanupCompletedAt: Timestamp.now(),
+          updatedAt: Timestamp.now(),
+        },
+        { merge: true },
+      )
+      .catch(() => {
+        // Reply may have been physically removed; cleanup is done.
+      });
+  }
 }
 
 export async function toggleReplyReaction(
@@ -900,6 +1019,19 @@ async function dismissOpenReportsForPosts(
   }
 }
 
+async function cleanupPostArtifacts(
+  db: Firestore,
+  postId: string,
+): Promise<void> {
+  // The post is gone from public view, so any open reports have nothing left to act on.
+  await dismissOpenReportsForPosts(db, [postId]);
+
+  // Clean up replies, post reactions, and reply reactions for this post.
+  await deleteRepliesForPost(db, postId);
+  await deleteReactionsForPost(db, postId);
+  await deleteReplyReactionsForPost(db, postId);
+}
+
 async function deleteRepliesForPost(
   db: Firestore,
   postId: string,
@@ -974,29 +1106,38 @@ export async function deletePost(uid: string, postId: string): Promise<void> {
       // Do not reveal whether someone else's post exists.
       throw new CommunityNotFoundError();
     }
-    if (readStatus(data.status) === 'deleted') {
+
+    const status = readStatus(data.status);
+    if (status !== 'deleted') {
+      transaction.update(ref, {
+        status: 'deleted',
+        title: '',
+        content: '',
+        needsReview: false,
+        reportCount: 0,
+        replyCount: 0,
+        reactionCounts: emptyReactionCounts(),
+        cleanupPending: true,
+        updatedAt: Timestamp.now(),
+      });
+    } else if (data.cleanupPending !== true) {
+      // Already deleted and cleanup previously completed (or legacy state).
       throw new CommunityNotFoundError();
     }
-
-    transaction.update(ref, {
-      status: 'deleted',
-      title: '',
-      content: '',
-      needsReview: false,
-      reportCount: 0,
-      replyCount: 0,
-      reactionCounts: emptyReactionCounts(),
-      updatedAt: Timestamp.now(),
-    });
+    // Already deleted but cleanup still pending: allow retry to resume cleanup.
   });
 
-  // The post is gone, so any open reports about it have nothing left to act on.
-  await dismissOpenReportsForPosts(db, [postId]);
+  await cleanupPostArtifacts(db, postId);
 
-  // Clean up replies, post reactions, and reply reactions for this post
-  await deleteRepliesForPost(db, postId);
-  await deleteReactionsForPost(db, postId);
-  await deleteReplyReactionsForPost(db, postId);
+  // Mark cleanup complete only after artifact cleanup succeeds.
+  await ref
+    .set(
+      { cleanupPending: false, cleanupCompletedAt: Timestamp.now(), updatedAt: Timestamp.now() },
+      { merge: true },
+    )
+    .catch(() => {
+      // Post may have been physically removed by another flow; cleanup is still done.
+    });
 }
 
 export async function reportPost(
@@ -1101,10 +1242,14 @@ export async function moderatePost(
   });
 }
 
-export async function getModerationQueue(): Promise<CommunityModerationQueue> {
+export async function getModerationQueue(options?: {
+  repliesCursor?: string | null;
+  repliesLimit?: number;
+}): Promise<CommunityModerationQueue> {
   const db = getCommunityFirestore();
+  const repliesLimit = Math.max(1, Math.min(options?.repliesLimit ?? 30, 50));
 
-  const [openReports, flagged, hidden] = await Promise.all([
+  const [openReports, flagged, hidden, flaggedRepliesSnapshot] = await Promise.all([
     db
       .collection(REPORTS)
       .where('status', '==', 'open')
@@ -1123,6 +1268,30 @@ export async function getModerationQueue(): Promise<CommunityModerationQueue> {
       .orderBy('createdAt', 'desc')
       .limit(30)
       .get(),
+    (async () => {
+      let repliesQuery = db
+        .collection(REPLIES)
+        .where('needsReview', '==', true)
+        .orderBy('createdAt', 'desc')
+        .orderBy(FieldPath.documentId(), 'desc')
+        .limit(repliesLimit + 1);
+
+      const decoded = decodeCursor(options?.repliesCursor ?? null);
+      if (decoded) {
+        const cursorDoc = await db.collection(REPLIES).doc(decoded.id).get();
+        if (cursorDoc.exists) {
+          const cursorData = cursorDoc.data() as CommunityReplyDoc;
+          if (
+            cursorData.needsReview === true &&
+            readStatus(cursorData.status) !== 'deleted'
+          ) {
+            repliesQuery = repliesQuery.startAfter(cursorDoc);
+          }
+        }
+      }
+
+      return repliesQuery.get();
+    })(),
   ]);
 
   const posts = new Map<string, CommunityModerationPost>();
@@ -1137,105 +1306,461 @@ export async function getModerationQueue(): Promise<CommunityModerationQueue> {
   flagged.docs.forEach(addPost);
   hidden.docs.forEach(addPost);
 
+  const replyDocs = flaggedRepliesSnapshot.docs
+    .filter((doc) => {
+      const data = doc.data() as CommunityReplyDoc;
+      return data.needsReview === true && readStatus(data.status) !== 'deleted';
+    })
+    .slice(0, repliesLimit);
+
+  const repliesNextCursor =
+    flaggedRepliesSnapshot.docs.length > repliesLimit && replyDocs.length > 0
+      ? encodeCursor(
+          timestampMillis(
+            (replyDocs[replyDocs.length - 1].data() as CommunityReplyDoc).createdAt,
+          ),
+          replyDocs[replyDocs.length - 1].id,
+        )
+      : null;
+
   return {
     posts: [...posts.values()],
+    replies: replyDocs.map((doc) =>
+      toModerationReply(doc.id, doc.data() as CommunityReplyDoc),
+    ),
     reports: openReports.docs.map((doc) =>
       toModerationReport(doc.id, doc.data() as CommunityReportDoc),
     ),
+    repliesNextCursor,
   };
 }
 
-export async function deleteMyCommunityData(uid: string): Promise<{
-  deletedPosts: number;
-  deletedReports: number;
-  deletedReplies: number;
-}> {
+export async function moderateReply(
+  postId: string,
+  replyId: string,
+  action: 'hide' | 'restore' | 'dismiss-reports',
+): Promise<void> {
   const db = getCommunityFirestore();
+  const replyRef = db.collection(REPLIES).doc(replyId);
 
-  let deletedPosts = 0;
-  const deletedPostIds: string[] = [];
+  let shouldCleanupReactions = false;
+
+  await db.runTransaction(async (transaction) => {
+    const replySnapshot = await transaction.get(replyRef);
+    if (!replySnapshot.exists) {
+      throw new CommunityNotFoundError();
+    }
+    const replyData = replySnapshot.data() as CommunityReplyDoc;
+    if (readString(replyData.postId) !== postId) {
+      // Do not reveal reply existence across posts.
+      throw new CommunityNotFoundError();
+    }
+
+    const status = readStatus(replyData.status);
+    const needsReview = replyData.needsReview === true;
+    const postRef = db.collection(POSTS).doc(postId);
+    const postSnapshot = await transaction.get(postRef);
+    const postExists = postSnapshot.exists;
+    const postData = postExists
+      ? (postSnapshot.data() as CommunityPostDoc)
+      : null;
+    const postVisible =
+      postData !== null && readStatus(postData.status) === 'visible';
+    const now = Timestamp.now();
+
+    if (status === 'deleted') {
+      if (replyData.reactionCleanupPending === true) {
+        shouldCleanupReactions = true;
+      }
+      return;
+    }
+
+    if (action === 'restore') {
+      if (needsReview && status !== 'visible') {
+        if (!postVisible) {
+          throw new CommunityError(
+            'This reply cannot be approved because its post is not available.',
+            409,
+            'post_unavailable',
+          );
+        }
+        transaction.update(replyRef, {
+          status: 'visible',
+          needsReview: false,
+          updatedAt: now,
+        });
+        transaction.update(postRef, {
+          replyCount: FieldValue.increment(1),
+          updatedAt: now,
+        });
+        return;
+      }
+
+      // No-op safe restore for non-pending replies (keeps existing semantics simple).
+      if (status === 'hidden' && !needsReview) {
+        transaction.update(replyRef, { status: 'visible', updatedAt: now });
+      }
+      return;
+    }
+
+    if (action === 'dismiss-reports') {
+      if (!needsReview) return;
+      transaction.update(replyRef, {
+        needsReview: false,
+        updatedAt: now,
+      });
+      return;
+    }
+
+    // hide => reject/remove pending reply (or hide visible reply)
+    if (needsReview && status !== 'visible') {
+      transaction.update(replyRef, {
+        status: 'deleted',
+        content: '',
+        needsReview: false,
+        reactionCounts: {},
+        reactionCleanupPending: true,
+        updatedAt: now,
+      });
+      shouldCleanupReactions = true;
+      return;
+    }
+
+    if (status === 'visible') {
+      transaction.update(replyRef, {
+        status: 'hidden',
+        needsReview: false,
+        reactionCounts: {},
+        reactionCleanupPending: true,
+        updatedAt: now,
+      });
+      if (postExists) {
+        transaction.update(postRef, {
+          replyCount: FieldValue.increment(-1),
+          updatedAt: now,
+        });
+      }
+      shouldCleanupReactions = true;
+    }
+  });
+
+  if (shouldCleanupReactions) {
+    await deleteReplyReactionsForReply(db, replyId);
+    await replyRef
+      .set(
+        {
+          reactionCleanupPending: false,
+          reactionCleanupCompletedAt: Timestamp.now(),
+          updatedAt: Timestamp.now(),
+        },
+        { merge: true },
+      )
+      .catch(() => {
+        // Reply may have been physically removed; cleanup is done.
+      });
+  }
+}
+
+async function markPostDeletionTarget(
+  db: Firestore,
+  uid: string,
+  postRef: FirebaseFirestore.DocumentReference,
+): Promise<void> {
+  const targetRef = db
+    .collection(MEMBERS)
+    .doc(uid)
+    .collection(DELETION_POST_TARGETS)
+    .doc(postRef.id);
+
+  const [postSnapshot, targetSnapshot] = await Promise.all([
+    postRef.get(),
+    targetRef.get(),
+  ]);
+  if (!postSnapshot.exists) return;
+
+  const postData = postSnapshot.data() as CommunityPostDoc;
+  const status = readStatus(postData.status);
+  const batch = db.batch();
+  let hasWrite = false;
+
+  if (status !== 'deleted' || postData.cleanupPending !== true) {
+    batch.set(
+      postRef,
+      {
+        status: 'deleted',
+        title: '',
+        content: '',
+        needsReview: false,
+        reportCount: 0,
+        replyCount: 0,
+        reactionCounts: emptyReactionCounts(),
+        cleanupPending: true,
+        updatedAt: Timestamp.now(),
+      },
+      { merge: true },
+    );
+    hasWrite = true;
+  }
+
+  if (!targetSnapshot.exists) {
+    batch.set(targetRef, {
+      postId: postRef.id,
+      status: 'pending',
+      createdAt: Timestamp.now(),
+      updatedAt: Timestamp.now(),
+    });
+    hasWrite = true;
+  }
+
+  if (hasWrite) {
+    await batch.commit();
+  }
+}
+
+async function ensureAccountDeletionTargets(
+  db: Firestore,
+  uid: string,
+  memberRef: FirebaseFirestore.DocumentReference,
+): Promise<void> {
+  const memberSnapshot = await memberRef.get();
+  const memberData = memberSnapshot.data() ?? {};
+
+  // One-time migration from legacy in-document array to scalable target docs.
+  const legacyIds = Array.isArray(memberData.deletionTargetPostIds)
+    ? memberData.deletionTargetPostIds.filter(
+        (id): id is string => typeof id === 'string' && id.length > 0,
+      )
+    : [];
+  if (legacyIds.length > 0) {
+    for (const postId of legacyIds) {
+      const postRef = db.collection(POSTS).doc(postId);
+      const targetRef = memberRef.collection(DELETION_POST_TARGETS).doc(postId);
+      const [postSnapshot, targetSnapshot] = await Promise.all([
+        postRef.get(),
+        targetRef.get(),
+      ]);
+      if (!targetSnapshot.exists) {
+        await targetRef.set({
+          postId,
+          status: 'pending',
+          createdAt: Timestamp.now(),
+          updatedAt: Timestamp.now(),
+        });
+      }
+      if (postSnapshot.exists) {
+        const postData = postSnapshot.data() as CommunityPostDoc;
+        const status = readStatus(postData.status);
+        if (status !== 'deleted' || postData.cleanupPending !== true) {
+          await postRef.set(
+            {
+              status: 'deleted',
+              title: '',
+              content: '',
+              needsReview: false,
+              reportCount: 0,
+              replyCount: 0,
+              reactionCounts: emptyReactionCounts(),
+              cleanupPending: true,
+              updatedAt: Timestamp.now(),
+            },
+            { merge: true },
+          );
+        }
+      }
+    }
+    await memberRef.set(
+      {
+        deletionTargetsRecorded: true,
+        deletionTargetsRecordedAt:
+          memberData.deletionTargetsRecordedAt ?? Timestamp.now(),
+        deletionTargetPostIds: FieldValue.delete(),
+        updatedAt: Timestamp.now(),
+      },
+      { merge: true },
+    );
+    return;
+  }
+
+  if (memberData.deletionTargetsRecorded === true) {
+    return;
+  }
+
+  // Record durable per-post targets before any physical post deletion.
   for (;;) {
     const snapshot = await db
       .collection(POSTS)
       .where('authorId', '==', uid)
-      .limit(100)
+      .limit(50)
       .get();
     if (snapshot.empty) break;
-    deletedPostIds.push(...snapshot.docs.map((doc) => doc.id));
-    await Promise.all(
-      snapshot.docs.map((doc) => db.recursiveDelete(doc.ref)),
-    );
-    deletedPosts += snapshot.size;
-    if (snapshot.size < 100) break;
+
+    for (const doc of snapshot.docs) {
+      await markPostDeletionTarget(db, uid, doc.ref);
+    }
+
+    if (snapshot.size < 50) break;
   }
 
-  // Reports other people made about these posts have no target anymore.
-  await dismissOpenReportsForPosts(db, deletedPostIds);
+  await memberRef.set(
+    {
+      deletionTargetsRecorded: true,
+      deletionTargetsRecordedAt: Timestamp.now(),
+      updatedAt: Timestamp.now(),
+    },
+    { merge: true },
+  );
+}
 
-  // Clean up replies, post reactions, and reply reactions for the deleted posts
-  for (const postId of deletedPostIds) {
-    await deleteRepliesForPost(db, postId);
-    await deleteReactionsForPost(db, postId);
-    await deleteReplyReactionsForPost(db, postId);
+async function processAccountDeletionPostTargets(
+  db: Firestore,
+  uid: string,
+): Promise<number> {
+  let deletedPosts = 0;
+  const targetsRef = db
+    .collection(MEMBERS)
+    .doc(uid)
+    .collection(DELETION_POST_TARGETS);
+
+  for (;;) {
+    const snapshot = await targetsRef.limit(50).get();
+    if (snapshot.empty) break;
+
+    for (const targetDoc of snapshot.docs) {
+      const postId =
+        typeof targetDoc.data().postId === 'string'
+          ? (targetDoc.data().postId as string)
+          : targetDoc.id;
+      const targetStatus = readString(targetDoc.data().status);
+      const postRef = db.collection(POSTS).doc(postId);
+
+      if (targetStatus !== 'post_deleted') {
+        // Idempotent cleanup while post (or its remnants) is still addressable.
+        await cleanupPostArtifacts(db, postId);
+
+        const postSnapshot = await postRef.get();
+        if (postSnapshot.exists) {
+          await db.recursiveDelete(postRef).catch(() => {
+            // If already removed or partially removed, retry can resume safely.
+          });
+          deletedPosts += 1;
+        }
+
+        await targetDoc.ref.set(
+          {
+            status: 'post_deleted',
+            postDeletedAt: Timestamp.now(),
+            updatedAt: Timestamp.now(),
+          },
+          { merge: true },
+        );
+      } else {
+        // Resume-safe: ensure physical post removal completed.
+        const postSnapshot = await postRef.get();
+        if (postSnapshot.exists) {
+          await db.recursiveDelete(postRef).catch(() => {
+            // Retry can resume safely.
+          });
+          deletedPosts += 1;
+        }
+      }
+
+      await targetDoc.ref.delete().catch(() => {
+        // Missing target doc is already the desired state.
+      });
+    }
   }
 
-  // Delete all replies authored by this user, and adjust replyCount on posts by others
+  return deletedPosts;
+}
+
+async function cleanupUserRepliesForAccountDeletion(
+  db: Firestore,
+  uid: string,
+  memberRef: FirebaseFirestore.DocumentReference,
+): Promise<number> {
   let deletedReplies = 0;
-  const postReplyDecrements = new Map<string, number>();
+  const targetsRef = memberRef.collection(DELETION_POST_TARGETS);
 
   for (;;) {
     const snapshot = await db
       .collection(REPLIES)
       .where('authorId', '==', uid)
-      .limit(100)
+      .limit(50)
       .get();
     if (snapshot.empty) break;
 
     for (const doc of snapshot.docs) {
       const data = doc.data() as CommunityReplyDoc;
-      if (readStatus(data.status) === 'visible') {
+
+      if (data.deletionCountAdjusted !== true) {
         const postId = readString(data.postId);
-        if (postId) {
-          postReplyDecrements.set(
-            postId,
-            (postReplyDecrements.get(postId) ?? 0) + 1,
-          );
+        let shouldDecrement = false;
+        if (postId && readStatus(data.status) === 'visible') {
+          const [postSnapshot, targetSnapshot] = await Promise.all([
+            db.collection(POSTS).doc(postId).get(),
+            targetsRef.doc(postId).get(),
+          ]);
+          shouldDecrement =
+            !targetSnapshot.exists &&
+            postSnapshot.exists &&
+            readStatus((postSnapshot.data() as CommunityPostDoc).status) !==
+              'deleted';
         }
-      }
-    }
 
-    const batch = db.batch();
-    for (const doc of snapshot.docs) {
-      batch.delete(doc.ref);
-    }
-    await batch.commit();
+        await db.runTransaction(async (transaction) => {
+          const freshReply = await transaction.get(doc.ref);
+          if (!freshReply.exists) return;
+          const freshData = freshReply.data() as CommunityReplyDoc;
+          if (freshData.deletionCountAdjusted === true) return;
 
-    deletedReplies += snapshot.size;
-    if (snapshot.size < 100) break;
-  }
+          if (shouldDecrement) {
+            const postIdForDec = readString(freshData.postId);
+            if (postIdForDec) {
+              const postRef = db.collection(POSTS).doc(postIdForDec);
+              const postSnapshot = await transaction.get(postRef);
+              if (postSnapshot.exists) {
+                const postData = postSnapshot.data() as CommunityPostDoc;
+                if (readStatus(postData.status) !== 'deleted') {
+                  const currentReplyCount = readNumber(postData.replyCount);
+                  transaction.update(postRef, {
+                    replyCount: Math.max(0, currentReplyCount - 1),
+                    updatedAt: Timestamp.now(),
+                  });
+                }
+              }
+            }
+          }
 
-  // Adjust replyCount on posts authored by other people
-  for (const [postId, count] of postReplyDecrements.entries()) {
-    if (deletedPostIds.includes(postId)) continue;
-    const postRef = db.collection(POSTS).doc(postId);
-    await db.runTransaction(async (transaction) => {
-      const postSnapshot = await transaction.get(postRef);
-      if (postSnapshot.exists) {
-        const currentReplyCount = readNumber(
-          (postSnapshot.data() as CommunityPostDoc).replyCount,
-        );
-        transaction.update(postRef, {
-          replyCount: Math.max(0, currentReplyCount - count),
-          updatedAt: Timestamp.now(),
+          transaction.set(
+            doc.ref,
+            {
+              deletionCountAdjusted: true,
+              deletionCountAdjustedAt: Timestamp.now(),
+              updatedAt: Timestamp.now(),
+            },
+            { merge: true },
+          );
         });
       }
-    }).catch(() => {
-      // Best-effort cleanup
-    });
+
+      // Reply reactions are owned by this reply; remove before deleting reply.
+      await deleteReplyReactionsForReply(db, doc.id);
+      await doc.ref.delete().catch(() => {
+        // Missing reply doc is already the desired state.
+      });
+      deletedReplies += 1;
+    }
   }
 
-  // Delete all post reactions authored by this user, and adjust reactionCounts on posts by others
-  const postReactionDecrements = new Map<string, Record<CommunityReaction, number>>();
+  return deletedReplies;
+}
+
+async function cleanupUserPostReactionsForAccountDeletion(
+  db: Firestore,
+  uid: string,
+  memberRef: FirebaseFirestore.DocumentReference,
+): Promise<void> {
+  const targetsRef = memberRef.collection(DELETION_POST_TARGETS);
 
   for (;;) {
     const snapshot = await db
@@ -1247,51 +1772,76 @@ export async function deleteMyCommunityData(uid: string): Promise<{
 
     for (const doc of snapshot.docs) {
       const data = doc.data() as CommunityReactionDoc;
-      const postId = readString(data.postId);
-      const reaction = data.reactionType as CommunityReaction;
-      if (postId && isCommunityReaction(reaction)) {
-        if (!postReactionDecrements.has(postId)) {
-          postReactionDecrements.set(postId, emptyReactionCounts());
+
+      if (data.deletionCountAdjusted !== true) {
+        const postId = readString(data.postId);
+        const reaction = data.reactionType;
+        let shouldDecrement = false;
+        if (postId && isCommunityReaction(reaction)) {
+          const [postSnapshot, targetSnapshot] = await Promise.all([
+            db.collection(POSTS).doc(postId).get(),
+            targetsRef.doc(postId).get(),
+          ]);
+          shouldDecrement =
+            !targetSnapshot.exists &&
+            postSnapshot.exists &&
+            readStatus((postSnapshot.data() as CommunityPostDoc).status) !==
+              'deleted';
         }
-        const counts = postReactionDecrements.get(postId)!;
-        counts[reaction] = (counts[reaction] ?? 0) + 1;
-      }
-    }
 
-    const batch = db.batch();
-    for (const doc of snapshot.docs) {
-      batch.delete(doc.ref);
-    }
-    await batch.commit();
+        await db.runTransaction(async (transaction) => {
+          const fresh = await transaction.get(doc.ref);
+          if (!fresh.exists) return;
+          const freshData = fresh.data() as CommunityReactionDoc;
+          if (freshData.deletionCountAdjusted === true) return;
 
-    if (snapshot.size < 100) break;
-  }
+          if (shouldDecrement && isCommunityReaction(freshData.reactionType)) {
+            const postIdForDec = readString(freshData.postId);
+            if (postIdForDec) {
+              const postRef = db.collection(POSTS).doc(postIdForDec);
+              const postSnapshot = await transaction.get(postRef);
+              if (postSnapshot.exists) {
+                const postData = postSnapshot.data() as CommunityPostDoc;
+                if (readStatus(postData.status) !== 'deleted') {
+                  const currentCounts = readReactionCounts(
+                    postData.reactionCounts,
+                  );
+                  currentCounts[freshData.reactionType] = Math.max(
+                    0,
+                    (currentCounts[freshData.reactionType] ?? 0) - 1,
+                  );
+                  transaction.update(postRef, {
+                    reactionCounts: currentCounts,
+                    updatedAt: Timestamp.now(),
+                  });
+                }
+              }
+            }
+          }
 
-  // Adjust reactionCounts on posts
-  for (const [postId, decrements] of postReactionDecrements.entries()) {
-    if (deletedPostIds.includes(postId)) continue;
-    const postRef = db.collection(POSTS).doc(postId);
-    await db.runTransaction(async (transaction) => {
-      const postSnapshot = await transaction.get(postRef);
-      if (postSnapshot.exists) {
-        const postData = postSnapshot.data() as CommunityPostDoc;
-        const currentCounts = readReactionCounts(postData.reactionCounts);
-        for (const [reaction, dec] of Object.entries(decrements) as [CommunityReaction, number][]) {
-          currentCounts[reaction] = Math.max(0, currentCounts[reaction] - dec);
-        }
-        transaction.update(postRef, {
-          reactionCounts: currentCounts,
-          updatedAt: Timestamp.now(),
+          transaction.set(
+            doc.ref,
+            {
+              deletionCountAdjusted: true,
+              deletionCountAdjustedAt: Timestamp.now(),
+              updatedAt: Timestamp.now(),
+            },
+            { merge: true },
+          );
         });
       }
-    }).catch(() => {
-      // Best-effort
-    });
+
+      await doc.ref.delete().catch(() => {
+        // Missing reaction doc is already the desired state.
+      });
+    }
   }
+}
 
-  // Delete all reply reactions authored by this user, and adjust reactionCounts on replies by others
-  const replyReactionDecrements = new Map<string, Record<string, number>>();
-
+async function cleanupUserReplyReactionsForAccountDeletion(
+  db: Firestore,
+  uid: string,
+): Promise<void> {
   for (;;) {
     const snapshot = await db
       .collection(REPLY_REACTIONS)
@@ -1302,52 +1852,112 @@ export async function deleteMyCommunityData(uid: string): Promise<{
 
     for (const doc of snapshot.docs) {
       const data = doc.data() as CommunityReplyReactionDoc;
-      const replyId = readString(data.replyId);
-      const emoji = readString(data.emoji);
-      if (replyId && isReplyEmoji(emoji)) {
-        if (!replyReactionDecrements.has(replyId)) {
-          replyReactionDecrements.set(replyId, {});
+
+      if (data.deletionCountAdjusted !== true) {
+        const replyId = readString(data.replyId);
+        const emoji = readString(data.emoji);
+        let shouldDecrement = false;
+        if (replyId && isReplyEmoji(emoji)) {
+          const replySnapshot = await db.collection(REPLIES).doc(replyId).get();
+          shouldDecrement =
+            replySnapshot.exists &&
+            readStatus((replySnapshot.data() as CommunityReplyDoc).status) !==
+              'deleted';
         }
-        const counts = replyReactionDecrements.get(replyId)!;
-        counts[emoji] = (counts[emoji] ?? 0) + 1;
-      }
-    }
 
-    const batch = db.batch();
-    for (const doc of snapshot.docs) {
-      batch.delete(doc.ref);
-    }
-    await batch.commit();
+        await db.runTransaction(async (transaction) => {
+          const fresh = await transaction.get(doc.ref);
+          if (!fresh.exists) return;
+          const freshData = fresh.data() as CommunityReplyReactionDoc;
+          if (freshData.deletionCountAdjusted === true) return;
 
-    if (snapshot.size < 100) break;
-  }
-
-  // Adjust reactionCounts on replies
-  for (const [replyId, decrements] of replyReactionDecrements.entries()) {
-    const replyRef = db.collection(REPLIES).doc(replyId);
-    await db.runTransaction(async (transaction) => {
-      const replySnapshot = await transaction.get(replyRef);
-      if (replySnapshot.exists) {
-        const replyData = replySnapshot.data() as CommunityReplyDoc;
-        const currentCounts = readReplyReactionCounts(replyData.reactionCounts);
-        for (const [emoji, dec] of Object.entries(decrements)) {
-          const updated = Math.max(0, (currentCounts[emoji] ?? 0) - dec);
-          if (updated > 0) {
-            currentCounts[emoji] = updated;
-          } else {
-            delete currentCounts[emoji];
+          if (shouldDecrement) {
+            const replyIdForDec = readString(freshData.replyId);
+            const emojiForDec = readString(freshData.emoji);
+            if (replyIdForDec && isReplyEmoji(emojiForDec)) {
+              const replyRef = db.collection(REPLIES).doc(replyIdForDec);
+              const replySnapshot = await transaction.get(replyRef);
+              if (replySnapshot.exists) {
+                const replyData = replySnapshot.data() as CommunityReplyDoc;
+                if (readStatus(replyData.status) !== 'deleted') {
+                  const currentCounts = readReplyReactionCounts(
+                    replyData.reactionCounts,
+                  );
+                  const updated = Math.max(
+                    0,
+                    (currentCounts[emojiForDec] ?? 0) - 1,
+                  );
+                  if (updated > 0) {
+                    currentCounts[emojiForDec] = updated;
+                  } else {
+                    delete currentCounts[emojiForDec];
+                  }
+                  transaction.update(replyRef, {
+                    reactionCounts: currentCounts,
+                    updatedAt: Timestamp.now(),
+                  });
+                }
+              }
+            }
           }
-        }
-        transaction.update(replyRef, {
-          reactionCounts: currentCounts,
-          updatedAt: Timestamp.now(),
+
+          transaction.set(
+            doc.ref,
+            {
+              deletionCountAdjusted: true,
+              deletionCountAdjustedAt: Timestamp.now(),
+              updatedAt: Timestamp.now(),
+            },
+            { merge: true },
+          );
         });
       }
-    }).catch(() => {
-      // Best-effort
-    });
-  }
 
+      await doc.ref.delete().catch(() => {
+        // Missing reply-reaction doc is already the desired state.
+      });
+    }
+  }
+}
+
+export async function deleteMyCommunityData(uid: string): Promise<{
+  deletedPosts: number;
+  deletedReports: number;
+  deletedReplies: number;
+}> {
+  const db = getCommunityFirestore();
+  const memberRef = db.collection(MEMBERS).doc(uid);
+
+  // Fence: block new participation before recording/removing content.
+  await memberRef.set(
+    {
+      deletionState: 'deleting',
+      deletionStartedAt: Timestamp.now(),
+      updatedAt: Timestamp.now(),
+    },
+    { merge: true },
+  );
+
+  // Durable, scalable post targets (member subcollection) recorded before physical deletion.
+  await ensureAccountDeletionTargets(db, uid, memberRef);
+
+  // Idempotent artifact cleanup and physical post deletion, processed in bounded pages.
+  const deletedPosts = await processAccountDeletionPostTargets(db, uid);
+
+  // Delete user-authored replies and adjust counts on others' posts durably/idempotently.
+  const deletedReplies = await cleanupUserRepliesForAccountDeletion(
+    db,
+    uid,
+    memberRef,
+  );
+
+  // Delete user-authored post reactions and adjust counts durably/idempotently.
+  await cleanupUserPostReactionsForAccountDeletion(db, uid, memberRef);
+
+  // Delete user-authored reply reactions and adjust counts durably/idempotently.
+  await cleanupUserReplyReactionsForAccountDeletion(db, uid);
+
+  // Delete reports made by this user.
   let deletedReports = 0;
   for (;;) {
     const snapshot = await db
@@ -1356,20 +1966,17 @@ export async function deleteMyCommunityData(uid: string): Promise<{
       .limit(100)
       .get();
     if (snapshot.empty) break;
-    await Promise.all(
-      snapshot.docs.map((doc) => db.recursiveDelete(doc.ref)),
-    );
+    const batch = db.batch();
+    for (const doc of snapshot.docs) {
+      batch.delete(doc.ref);
+    }
+    await batch.commit();
     deletedReports += snapshot.size;
     if (snapshot.size < 100) break;
   }
 
-  await db
-    .collection(MEMBERS)
-    .doc(uid)
-    .delete()
-    .catch(() => {
-      // A missing member document is already the desired end state.
-    });
+  // Clear the durable fence/state only after all cleanup steps completed.
+  await memberRef.delete();
 
   return { deletedPosts, deletedReports, deletedReplies };
 }

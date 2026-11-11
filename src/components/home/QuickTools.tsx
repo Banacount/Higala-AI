@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowUpRight } from 'lucide-react';
 import { ToolCard } from '@/components/tools/ToolCard';
@@ -22,19 +22,19 @@ function pickRandomTool(): FeaturedToolId {
 
   const candidates = FEATURED_TOOL_IDS.filter((id) => id !== previous);
   const pool = candidates.length > 0 ? candidates : FEATURED_TOOL_IDS;
-  const selected = pool[Math.floor(Math.random() * pool.length)];
-
-  try {
-    window.sessionStorage.setItem(LAST_TOOL_KEY, selected);
-  } catch {
-    // Ignore storage failures.
-  }
-
-  return selected;
+  return pool[Math.floor(Math.random() * pool.length)];
 }
 
 export function QuickTools() {
   const [toolId] = useState<FeaturedToolId>(pickRandomTool);
+
+  useEffect(() => {
+    try {
+      window.sessionStorage.setItem(LAST_TOOL_KEY, toolId);
+    } catch {
+      // Ignore storage failures.
+    }
+  }, [toolId]);
 
   return (
     <section>

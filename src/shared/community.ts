@@ -233,6 +233,7 @@ export interface CommunityReply {
 
 export interface CommunityReplyList {
   replies: CommunityReply[];
+  nextCursor: string | null;
 }
 
 export interface CommunityPostList {
@@ -267,7 +268,19 @@ export interface CommunityModerationReport {
   status: 'open' | 'reviewed' | 'dismissed';
 }
 
+export interface CommunityModerationReply {
+  id: string;
+  postId: string;
+  content: string;
+  createdAt: number;
+  status: CommunityPostStatus;
+  riskLevel: RiskLevel;
+  needsReview: boolean;
+}
+
 export interface CommunityModerationQueue {
   posts: CommunityModerationPost[];
+  replies: CommunityModerationReply[];
   reports: CommunityModerationReport[];
+  repliesNextCursor: string | null;
 }

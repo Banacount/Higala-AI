@@ -21,6 +21,7 @@ import {
   listPosts,
   listReplies,
   moderatePost,
+  moderateReply,
   reportPost,
   toggleReaction,
   toggleReplyReaction,
@@ -31,7 +32,10 @@ import {
   parseCreateReply,
   parseFeedQuery,
   parseModeratePost,
+  parseModerateReply,
+  parseModerationQueueQuery,
   parsePostId,
+  parseRepliesQuery,
   parseReplyId,
   parseReportPost,
   parseResource,
@@ -94,8 +98,10 @@ export async function handleCommunity(
 
       if (resource === 'replies') {
         const postId = parsePostId(params.get('postId') ?? params.get('id'));
-        const replies = await listReplies(identity.uid, postId);
-        return ok({ replies });
+        const query = parseRepliesQuery(params);
+        return ok(
+          await listReplies(identity.uid, postId, identity.isAdmin, query),
+        );
       }
 
       if (resource === 'me') {
@@ -105,7 +111,8 @@ export async function handleCommunity(
       if (!identity.isAdmin) {
         throw new CommunityForbiddenError('Moderator access is required.');
       }
-      return ok(await getModerationQueue());
+      const queueQuery = parseModerationQueueQuery(params);
+      return ok(await getModerationQueue(queueQuery));
     }
 
     if (method !== 'POST') {
@@ -175,6 +182,7 @@ export async function handleCommunity(
         return ok(
           {
             reply,
+            pendingReview: needsModeratorReview(screen),
             supportSuggested:
               screen.riskLevel === 'elevated' ||
               screen.riskLevel === 'crisis',
@@ -231,6 +239,13 @@ export async function handleCommunity(
         await requireCommunityAdmin(req);
         const input = parseModeratePost(body);
         await moderatePost(input.postId, input.action);
+        return ok({ ok: true });
+      }
+
+      case 'moderate-reply': {
+        await requireCommunityAdmin(req);
+        const input = parseModerateReply(body);
+        await moderateReply(input.postId, input.replyId, input.action);
         return ok({ ok: true });
       }
 

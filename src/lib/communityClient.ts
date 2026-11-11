@@ -6,6 +6,7 @@ import type {
   CommunityPostList,
   CommunityReaction,
   CommunityReply,
+  CommunityReplyList,
   CommunityReportReason,
   ReplyEmoji,
 } from '@/shared/community';
@@ -132,7 +133,7 @@ export function createReply(
     content: string;
   },
   token: string,
-): Promise<{ reply: CommunityReply; supportSuggested?: boolean }> {
+): Promise<{ reply: CommunityReply; supportSuggested?: boolean; pendingReview?: boolean }> {
   return communityPost(
     {
       action: 'create-reply',
@@ -201,13 +202,23 @@ export function toggleReplyReaction(
 export async function getCommunityReplies(
   postId: string,
   token: string,
+  options?: { cursor?: string | null; limit?: number },
   signal?: AbortSignal,
-): Promise<CommunityReply[]> {
+): Promise<CommunityReplyList> {
   const result = await communityGet<
-    CommunityReply[] | { replies: CommunityReply[] }
-  >('replies', { postId }, token, signal);
-  if (Array.isArray(result)) return result;
-  return result.replies ?? [];
+    CommunityReply[] | { replies: CommunityReply[]; nextCursor?: string | null }
+  >(
+    'replies',
+    {
+      postId,
+      cursor: options?.cursor ?? undefined,
+      limit: options?.limit ? String(options.limit) : undefined,
+    },
+    token,
+    signal,
+  );
+  if (Array.isArray(result)) return { replies: result, nextCursor: null };
+  return { replies: result.replies ?? [], nextCursor: result.nextCursor ?? null };
 }
 
 export function reportPost(
@@ -235,6 +246,21 @@ export function acceptGuidelines(
   return communityPost({ action: 'accept-guidelines' }, token);
 }
 
+export function moderateReply(
+  input: { postId: string; replyId: string; action: CommunityModerationAction },
+  token: string,
+): Promise<{ ok: true }> {
+  return communityPost(
+    {
+      action: 'moderate-reply',
+      postId: input.postId,
+      replyId: input.replyId,
+      moderationAction: input.action,
+    },
+    token,
+  );
+}
+
 export function moderatePost(
   input: { postId: string; action: CommunityModerationAction },
   token: string,
@@ -257,9 +283,18 @@ export function deleteMyCommunityData(
 
 export function getModerationQueue(
   token: string,
+  options?: { repliesCursor?: string | null; repliesLimit?: number },
   signal?: AbortSignal,
 ): Promise<CommunityModerationQueue> {
-  return communityGet('moderation', {}, token, signal);
+  return communityGet(
+    'moderation',
+    {
+      repliesCursor: options?.repliesCursor ?? undefined,
+      repliesLimit: options?.repliesLimit ? String(options.repliesLimit) : undefined,
+    },
+    token,
+    signal,
+  );
 }
 
 export function getMyCommunityState(

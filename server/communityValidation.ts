@@ -41,6 +41,12 @@ export interface ReportPostInput {
   description: string;
 }
 
+export interface ModerateReplyInput {
+  postId: string;
+  replyId: string;
+  action: CommunityModerationAction;
+}
+
 export interface ModeratePostInput {
   postId: string;
   action: CommunityModerationAction;
@@ -168,6 +174,16 @@ export function parseReportPost(body: unknown): ReportPostInput {
   return { postId, reason: record.reason, description };
 }
 
+export function parseModerateReply(body: unknown): ModerateReplyInput {
+  const record = asRecord(body);
+  const postId = parsePostId(record.postId);
+  const replyId = parseReplyId(record.replyId);
+  if (!isCommunityModerationAction(record.moderationAction)) {
+    throw new CommunityError('Choose a valid moderation action.');
+  }
+  return { postId, replyId, action: record.moderationAction };
+}
+
 export function parseModeratePost(body: unknown): ModeratePostInput {
   const record = asRecord(body);
   const postId = parsePostId(record.postId);
@@ -210,6 +226,50 @@ export function parseFeedQuery(params: URLSearchParams): {
   }
 
   return { category, cursor: cursor || null, limit };
+}
+
+export function parseRepliesQuery(params: URLSearchParams): {
+  cursor: string | null;
+  limit: number;
+} {
+  const rawLimit = params.get('limit');
+  let limit: number = COMMUNITY_LIMITS.pageSize;
+  if (rawLimit) {
+    const parsed = Number(rawLimit);
+    if (!Number.isFinite(parsed) || parsed < 1) {
+      throw new CommunityError('The page size is invalid.');
+    }
+    limit = Math.min(Math.floor(parsed), COMMUNITY_LIMITS.maxPageSize);
+  }
+
+  const cursor = params.get('cursor');
+  if (cursor && cursor.length > COMMUNITY_LIMITS.cursor) {
+    throw new CommunityError('The page cursor is invalid.');
+  }
+
+  return { cursor: cursor || null, limit };
+}
+
+export function parseModerationQueueQuery(params: URLSearchParams): {
+  repliesCursor: string | null;
+  repliesLimit: number;
+} {
+  const rawLimit = params.get('repliesLimit') ?? params.get('limit');
+  let repliesLimit = 30;
+  if (rawLimit) {
+    const parsed = Number(rawLimit);
+    if (!Number.isFinite(parsed) || parsed < 1) {
+      throw new CommunityError('The page size is invalid.');
+    }
+    repliesLimit = Math.min(Math.floor(parsed), COMMUNITY_LIMITS.maxPageSize);
+  }
+
+  const cursor = params.get('repliesCursor') ?? params.get('cursor');
+  if (cursor && cursor.length > COMMUNITY_LIMITS.cursor) {
+    throw new CommunityError('The page cursor is invalid.');
+  }
+
+  return { repliesCursor: cursor || null, repliesLimit };
 }
 
 export function parseAction(value: unknown): string {

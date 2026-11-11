@@ -31,6 +31,15 @@
       "collectionGroup": "communityReplies",
       "queryScope": "COLLECTION",
       "fields": [
+        { "fieldPath": "needsReview", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" },
+        { "fieldPath": "__name__", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "communityReplies",
+      "queryScope": "COLLECTION",
+      "fields": [
         { "fieldPath": "postId", "order": "ASCENDING" },
         { "fieldPath": "status", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "ASCENDING" }
