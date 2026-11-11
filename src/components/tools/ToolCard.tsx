@@ -61,7 +61,7 @@ export function ToolCard({
   return (
     <Link
       to={href}
-      className={`group flex flex-col rounded-[1.35rem] border p-4 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lift ${tone.card} ${className}`}
+      className={`group flex flex-col rounded-[1.35rem] border p-4 transition duration-300 hover:-translate-y-0.5 hover:shadow-lift ${tone.card} ${className}`}
     >
       <div className="mb-3 flex items-start justify-between gap-2">
         <span

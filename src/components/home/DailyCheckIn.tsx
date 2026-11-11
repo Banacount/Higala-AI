@@ -6,6 +6,9 @@ import { MoodFace } from '@/components/MoodFace';
 import { lastNDays, streakFromEntries, todayKey } from '@/lib/utils';
 
 const LEVELS = [1, 2, 3, 4, 5] as const;
+const NARROW_WEEKDAY = new Intl.DateTimeFormat('en-PH', {
+  weekday: 'narrow',
+});
 
 export function DailyCheckIn() {
   const { todayMood, updateTodayMood, moodEntries } = useApp();
@@ -52,7 +55,7 @@ export function DailyCheckIn() {
                   onClick={() => updateTodayMood({ level })}
                   aria-pressed={selected}
                   aria-label={`${mood.label} — ${mood.sublabel}`}
-                  className={`group flex flex-col items-center gap-1 rounded-2xl border px-1 py-2 transition-all duration-200 ${
+                  className={`group flex flex-col items-center gap-1 rounded-2xl border px-1 py-2 transition duration-200 ${
                     selected
                       ? 'border-pine-400 bg-pine-50 shadow-sm'
                       : 'border-transparent bg-pine-900/[0.025] hover:-translate-y-0.5 hover:border-pine-200 hover:bg-pine-50'
@@ -117,9 +120,9 @@ export function DailyCheckIn() {
           <div className="mt-3 grid grid-cols-7 gap-1">
             {week.map((day) => {
               const entry = byDate.get(day);
-              const weekday = new Intl.DateTimeFormat('en-PH', {
-                weekday: 'narrow',
-              }).format(new Date(`${day}T12:00:00`));
+              const weekday = NARROW_WEEKDAY.format(
+                new Date(`${day}T12:00:00`),
+              );
               return (
                 <div key={day} className="flex flex-col items-center gap-1">
                   <div

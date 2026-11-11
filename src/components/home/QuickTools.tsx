@@ -1,8 +1,41 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowUpRight } from 'lucide-react';
 import { ToolCard } from '@/components/tools/ToolCard';
+import { TOOL_IDS, type ToolId } from '@/shared/types';
+
+type FeaturedToolId = Exclude<ToolId, 'none'>;
+
+const FEATURED_TOOL_IDS = TOOL_IDS.filter(
+  (id): id is FeaturedToolId => id !== 'none',
+);
+
+const LAST_TOOL_KEY = 'higala.home.featured-tool';
+
+function pickRandomTool(): FeaturedToolId {
+  let previous: string | null = null;
+  try {
+    previous = window.sessionStorage.getItem(LAST_TOOL_KEY);
+  } catch {
+    // Storage can be unavailable in private modes; a plain random pick is fine.
+  }
+
+  const candidates = FEATURED_TOOL_IDS.filter((id) => id !== previous);
+  const pool = candidates.length > 0 ? candidates : FEATURED_TOOL_IDS;
+  const selected = pool[Math.floor(Math.random() * pool.length)];
+
+  try {
+    window.sessionStorage.setItem(LAST_TOOL_KEY, selected);
+  } catch {
+    // Ignore storage failures.
+  }
+
+  return selected;
+}
 
 export function QuickTools() {
+  const [toolId] = useState<FeaturedToolId>(pickRandomTool);
+
   return (
     <section>
       <div className="mb-3 flex items-end justify-between gap-3">
@@ -23,10 +56,17 @@ export function QuickTools() {
         </Link>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        <ToolCard id="breathing" />
-        <ToolCard id="grounding" />
-        <ToolCard id="thought-record" />
+      <div className="grid gap-4 sm:grid-cols-[1fr_20rem] sm:items-center">
+        <div className="max-w-md">
+          <p className="text-[0.62rem] font-extrabold uppercase tracking-[0.14em] text-pine-600/70">
+            One tool at a time
+          </p>
+          <p className="mt-2 text-sm leading-relaxed text-muted">
+            Here is one small thing you can try today. Open it when you need
+            it — the full toolkit is always one tap away.
+          </p>
+        </div>
+        <ToolCard id={toolId} />
       </div>
     </section>
   );

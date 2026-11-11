@@ -3,6 +3,7 @@ import { CheckCircle2, Save, Sparkles } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { DISTORTIONS } from '@/lib/constants';
 import { Button } from '@/components/ui/Button';
+import { formatShortDateTime } from '@/lib/utils';
 
 const EMPTY_FORM = {
   situation: '',
@@ -278,12 +279,7 @@ export function ThoughtRecordTool() {
                 className="rounded-xl border border-pine-900/6 bg-cream/70 p-3"
               >
                 <p className="text-[0.58rem] font-extrabold uppercase tracking-[0.1em] text-pine-500">
-                  {new Intl.DateTimeFormat('en-PH', {
-                    month: 'short',
-                    day: 'numeric',
-                    hour: 'numeric',
-                    minute: '2-digit',
-                  }).format(new Date(record.createdAt))}
+                  {formatShortDateTime(record.createdAt)}
                 </p>
                 <p className="mt-1 text-xs font-semibold leading-snug text-pine-950">
                   {record.situation}

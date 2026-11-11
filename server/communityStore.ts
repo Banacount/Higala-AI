@@ -1,5 +1,6 @@
 import {
   FieldPath,
+  FieldValue,
   Timestamp,
   type DocumentSnapshot,
   type Firestore,
@@ -18,6 +19,7 @@ import {
   type CommunityPostList,
   type CommunityPostStatus,
   type CommunityReaction,
+  type CommunityReply,
   type CommunityReportReason,
 } from '../src/shared/community.ts';
 import { isRiskLevel, type RiskLevel } from '../src/shared/types.ts';
@@ -28,14 +30,21 @@ import {
   CommunityRateLimitError,
 } from './communityErrors.ts';
 import { getCommunityFirestore } from './firebaseAdmin.ts';
-import type { CreatePostInput, ReportPostInput } from './communityValidation.ts';
+import type {
+  CreatePostInput,
+  CreateReplyInput,
+  ReportPostInput,
+} from './communityValidation.ts';
 
 const POSTS = 'communityPosts';
 const REPORTS = 'communityReports';
 const MEMBERS = 'communityMembers';
+const REPLIES = 'communityReplies';
 
 const POST_WINDOW_MS = 10 * 60_000;
 const POST_WINDOW_MAX = 6;
+const REPLY_WINDOW_MS = 10 * 60_000;
+const REPLY_WINDOW_MAX = 15;
 const REPORT_WINDOW_MS = 60 * 60_000;
 const REPORT_WINDOW_MAX = 10;
 
@@ -50,6 +59,17 @@ interface CommunityPostDoc {
   reportCount?: unknown;
   replyCount?: unknown;
   reactionCounts?: unknown;
+  createdAt?: unknown;
+  updatedAt?: unknown;
+}
+
+interface CommunityReplyDoc {
+  authorId?: unknown;
+  postId?: unknown;
+  content?: unknown;
+  status?: unknown;
+  riskLevel?: unknown;
+  needsReview?: unknown;
   createdAt?: unknown;
   updatedAt?: unknown;
 }
@@ -122,6 +142,20 @@ function toPublicPost(
     updatedAt: timestampMillis(data.updatedAt),
     replyCount: readNumber(data.replyCount),
     reactionCounts: readReactionCounts(data.reactionCounts),
+    isMine: data.authorId === uid,
+  };
+}
+
+function toPublicReply(
+  id: string,
+  data: CommunityReplyDoc,
+  uid: string,
+): CommunityReply {
+  return {
+    id,
+    postId: readString(data.postId),
+    content: readString(data.content),
+    createdAt: timestampMillis(data.createdAt),
     isMine: data.authorId === uid,
   };
 }
@@ -270,18 +304,8 @@ export async function createPost(
     needsReview: boolean;
   },
 ): Promise<CommunityPost> {
-  const member = await getMember(uid);
-  if (!member.guidelinesAcceptedAt) {
-    throw new CommunityError(
-      'Please read and accept the community guidelines before your first post.',
-      403,
-      'guidelines_required',
-    );
-  }
-
   const db = getCommunityFirestore();
-  await enforceRateLimit(db, uid, 'post');
-
+  const memberRef = db.collection(MEMBERS).doc(uid);
   const ref = db.collection(POSTS).doc();
   const now = Timestamp.now();
   const reactionCounts = emptyReactionCounts();
@@ -300,7 +324,47 @@ export async function createPost(
     updatedAt: now,
   };
 
-  await ref.create(data);
+  // Guidelines, per-member rate limit, and the post itself share one
+  // transaction: a create now costs one Firestore round trip instead of three.
+  await db.runTransaction(async (transaction) => {
+    const memberSnapshot = await transaction.get(memberRef);
+    const member = memberSnapshot.data() ?? {};
+
+    if (timestampMillis(member.guidelinesAcceptedAt) <= 0) {
+      throw new CommunityError(
+        'Please read and accept the community guidelines before your first post.',
+        403,
+        'guidelines_required',
+      );
+    }
+
+    const windowStart = timestampMillis(member.postWindowStart);
+    const windowCount = readNumber(member.postWindowCount);
+    const nowMillis = now.toMillis();
+    let nextStart = nowMillis;
+    let nextCount = 1;
+
+    if (windowStart > 0 && nowMillis - windowStart < POST_WINDOW_MS) {
+      if (windowCount >= POST_WINDOW_MAX) {
+        throw new CommunityRateLimitError(
+          'You are sharing very quickly. Take a breath and try again in a few minutes.',
+        );
+      }
+      nextStart = windowStart;
+      nextCount = windowCount + 1;
+    }
+
+    transaction.set(
+      memberRef,
+      {
+        postWindowStart: Timestamp.fromMillis(nextStart),
+        postWindowCount: nextCount,
+        updatedAt: now,
+      },
+      { merge: true },
+    );
+    transaction.create(ref, data);
+  });
 
   return {
     id: ref.id,
@@ -313,6 +377,161 @@ export async function createPost(
     reactionCounts,
     isMine: true,
   };
+}
+
+export async function createReply(
+  uid: string,
+  input: CreateReplyInput,
+  moderation: {
+    riskLevel: RiskLevel;
+    needsReview: boolean;
+  },
+): Promise<CommunityReply> {
+  const db = getCommunityFirestore();
+  const memberRef = db.collection(MEMBERS).doc(uid);
+  const postRef = db.collection(POSTS).doc(input.postId);
+  const replyRef = db.collection(REPLIES).doc();
+  const now = Timestamp.now();
+
+  const data: CommunityReplyDoc = {
+    authorId: uid,
+    postId: input.postId,
+    content: input.content,
+    status: 'visible',
+    riskLevel: moderation.riskLevel,
+    needsReview: moderation.needsReview,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  await db.runTransaction(async (transaction) => {
+    const memberSnapshot = await transaction.get(memberRef);
+    const member = memberSnapshot.data() ?? {};
+
+    if (timestampMillis(member.guidelinesAcceptedAt) <= 0) {
+      throw new CommunityError(
+        'Please read and accept the community guidelines before your first reply.',
+        403,
+        'guidelines_required',
+      );
+    }
+
+    const postSnapshot = await transaction.get(postRef);
+    if (!postSnapshot.exists) {
+      throw new CommunityNotFoundError('This post does not exist.');
+    }
+    const post = postSnapshot.data() as CommunityPostDoc;
+    if (readStatus(post.status) !== 'visible') {
+      throw new CommunityNotFoundError('This post is no longer available.');
+    }
+
+    const windowStart = timestampMillis(member.replyWindowStart);
+    const windowCount = readNumber(member.replyWindowCount);
+    const nowMillis = now.toMillis();
+    let nextStart = nowMillis;
+    let nextCount = 1;
+
+    if (windowStart > 0 && nowMillis - windowStart < REPLY_WINDOW_MS) {
+      if (windowCount >= REPLY_WINDOW_MAX) {
+        throw new CommunityRateLimitError(
+          'You are replying very quickly. Take a breath and try again in a few minutes.',
+        );
+      }
+      nextStart = windowStart;
+      nextCount = windowCount + 1;
+    }
+
+    transaction.set(
+      memberRef,
+      {
+        replyWindowStart: Timestamp.fromMillis(nextStart),
+        replyWindowCount: nextCount,
+        updatedAt: now,
+      },
+      { merge: true },
+    );
+
+    transaction.update(postRef, {
+      replyCount: FieldValue.increment(1),
+      updatedAt: now,
+    });
+
+    transaction.create(replyRef, data);
+  });
+
+  return {
+    id: replyRef.id,
+    postId: input.postId,
+    content: input.content,
+    createdAt: now.toMillis(),
+    isMine: true,
+  };
+}
+
+export async function listReplies(
+  uid: string,
+  postId: string,
+): Promise<CommunityReply[]> {
+  const db = getCommunityFirestore();
+  const snapshot = await db
+    .collection(REPLIES)
+    .where('postId', '==', postId)
+    .get();
+
+  const visibleReplies = snapshot.docs
+    .map((doc) => ({
+      id: doc.id,
+      data: doc.data() as CommunityReplyDoc,
+    }))
+    .filter(({ data }) => readStatus(data.status) === 'visible');
+
+  visibleReplies.sort(
+    (a, b) =>
+      timestampMillis(a.data.createdAt) - timestampMillis(b.data.createdAt),
+  );
+
+  return visibleReplies.map(({ id, data }) => toPublicReply(id, data, uid));
+}
+
+export async function deleteReply(uid: string, replyId: string): Promise<void> {
+  const db = getCommunityFirestore();
+  const replyRef = db.collection(REPLIES).doc(replyId);
+
+  await db.runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(replyRef);
+    if (!snapshot.exists) {
+      throw new CommunityNotFoundError();
+    }
+    const data = snapshot.data() as CommunityReplyDoc;
+    if (data.authorId !== uid) {
+      // Do not reveal whether someone else's reply exists.
+      throw new CommunityNotFoundError();
+    }
+    if (readStatus(data.status) === 'deleted') {
+      throw new CommunityNotFoundError();
+    }
+
+    const postId = readString(data.postId);
+    const postRef = db.collection(POSTS).doc(postId);
+    const postSnapshot = await transaction.get(postRef);
+
+    transaction.update(replyRef, {
+      status: 'deleted',
+      content: '',
+      needsReview: false,
+      updatedAt: Timestamp.now(),
+    });
+
+    if (postSnapshot.exists) {
+      const currentReplyCount = readNumber(
+        (postSnapshot.data() as CommunityPostDoc).replyCount,
+      );
+      transaction.update(postRef, {
+        replyCount: Math.max(0, currentReplyCount - 1),
+        updatedAt: Timestamp.now(),
+      });
+    }
+  });
 }
 
 export async function listPosts(
@@ -346,19 +565,21 @@ export async function listPosts(
   }
 
   const snapshot = await query.get();
-  const docs = snapshot.docs.slice(0, options.limit);
+  const ordered = snapshot.docs.map((doc) => ({
+    doc,
+    data: doc.data() as CommunityPostDoc,
+  }));
+  const docs = ordered.slice(0, options.limit);
   const nextCursor =
-    snapshot.docs.length > options.limit && docs.length > 0
+    ordered.length > options.limit && docs.length > 0
       ? encodeCursor(
-          timestampMillis(docs[docs.length - 1].data().createdAt),
-          docs[docs.length - 1].id,
+          timestampMillis(docs[docs.length - 1].data.createdAt),
+          docs[docs.length - 1].doc.id,
         )
       : null;
 
   return {
-    posts: docs.map((doc) =>
-      toPublicPost(doc.id, doc.data() as CommunityPostDoc, uid),
-    ),
+    posts: docs.map(({ doc, data }) => toPublicPost(doc.id, data, uid)),
     nextCursor,
   };
 }
@@ -390,19 +611,46 @@ async function dismissOpenReportsForPosts(
   db: Firestore,
   postIds: string[],
 ): Promise<void> {
+  if (postIds.length === 0) return;
+
   const now = Timestamp.now();
-  for (const postId of postIds) {
+
+  for (let index = 0; index < postIds.length; index += 30) {
+    const chunk = postIds.slice(index, index + 30);
     const openReports = await db
       .collection(REPORTS)
-      .where('postId', '==', postId)
+      .where('postId', 'in', chunk)
       .where('status', '==', 'open')
       .get();
     if (openReports.empty) continue;
+
+    for (let start = 0; start < openReports.docs.length; start += 450) {
+      const batch = db.batch();
+      for (const report of openReports.docs.slice(start, start + 450)) {
+        batch.update(report.ref, { status: 'dismissed', reviewedAt: now });
+      }
+      await batch.commit();
+    }
+  }
+}
+
+async function deleteRepliesForPost(
+  db: Firestore,
+  postId: string,
+): Promise<void> {
+  for (;;) {
+    const snapshot = await db
+      .collection(REPLIES)
+      .where('postId', '==', postId)
+      .limit(100)
+      .get();
+    if (snapshot.empty) break;
     const batch = db.batch();
-    for (const report of openReports.docs) {
-      batch.update(report.ref, { status: 'dismissed', reviewedAt: now });
+    for (const doc of snapshot.docs) {
+      batch.delete(doc.ref);
     }
     await batch.commit();
+    if (snapshot.size < 100) break;
   }
 }
 
@@ -430,13 +678,16 @@ export async function deletePost(uid: string, postId: string): Promise<void> {
       content: '',
       needsReview: false,
       reportCount: 0,
+      replyCount: 0,
       updatedAt: Timestamp.now(),
     });
   });
 
   // The post is gone, so any open reports about it have nothing left to act on.
-  // Closing them keeps the moderation queue free of dead links.
   await dismissOpenReportsForPosts(db, [postId]);
+
+  // Clean up replies for this post
+  await deleteRepliesForPost(db, postId);
 }
 
 export async function reportPost(
@@ -447,8 +698,6 @@ export async function reportPost(
   await enforceRateLimit(db, uid, 'report');
 
   const postRef = db.collection(POSTS).doc(input.postId);
-  // Deterministic ID keeps one report per member per post and lets someone
-  // report again after a previous report was dismissed.
   const reportRef = db
     .collection(REPORTS)
     .doc(`${input.postId}_${uid}`);
@@ -590,6 +839,7 @@ export async function getModerationQueue(): Promise<CommunityModerationQueue> {
 export async function deleteMyCommunityData(uid: string): Promise<{
   deletedPosts: number;
   deletedReports: number;
+  deletedReplies: number;
 }> {
   const db = getCommunityFirestore();
 
@@ -612,6 +862,66 @@ export async function deleteMyCommunityData(uid: string): Promise<{
 
   // Reports other people made about these posts have no target anymore.
   await dismissOpenReportsForPosts(db, deletedPostIds);
+
+  // Clean up replies for the deleted posts
+  for (const postId of deletedPostIds) {
+    await deleteRepliesForPost(db, postId);
+  }
+
+  // Delete all replies authored by this user, and adjust replyCount on posts by others
+  let deletedReplies = 0;
+  const postReplyDecrements = new Map<string, number>();
+
+  for (;;) {
+    const snapshot = await db
+      .collection(REPLIES)
+      .where('authorId', '==', uid)
+      .limit(100)
+      .get();
+    if (snapshot.empty) break;
+
+    for (const doc of snapshot.docs) {
+      const data = doc.data() as CommunityReplyDoc;
+      if (readStatus(data.status) === 'visible') {
+        const postId = readString(data.postId);
+        if (postId) {
+          postReplyDecrements.set(
+            postId,
+            (postReplyDecrements.get(postId) ?? 0) + 1,
+          );
+        }
+      }
+    }
+
+    const batch = db.batch();
+    for (const doc of snapshot.docs) {
+      batch.delete(doc.ref);
+    }
+    await batch.commit();
+
+    deletedReplies += snapshot.size;
+    if (snapshot.size < 100) break;
+  }
+
+  // Adjust replyCount on posts authored by other people
+  for (const [postId, count] of postReplyDecrements.entries()) {
+    if (deletedPostIds.includes(postId)) continue;
+    const postRef = db.collection(POSTS).doc(postId);
+    await db.runTransaction(async (transaction) => {
+      const postSnapshot = await transaction.get(postRef);
+      if (postSnapshot.exists) {
+        const currentReplyCount = readNumber(
+          (postSnapshot.data() as CommunityPostDoc).replyCount,
+        );
+        transaction.update(postRef, {
+          replyCount: Math.max(0, currentReplyCount - count),
+          updatedAt: Timestamp.now(),
+        });
+      }
+    }).catch(() => {
+      // Best-effort cleanup
+    });
+  }
 
   let deletedReports = 0;
   for (;;) {
@@ -636,5 +946,5 @@ export async function deleteMyCommunityData(uid: string): Promise<{
       // A missing member document is already the desired end state.
     });
 
-  return { deletedPosts, deletedReports };
+  return { deletedPosts, deletedReports, deletedReplies };
 }

@@ -85,7 +85,7 @@ export function GroundingTool() {
           {GROUNDING_STEPS.map((item, index) => (
             <span
               key={item.title}
-              className={`h-1.5 rounded-full transition-all ${
+              className={`h-1.5 rounded-full transition-[width,background-color] ${
                 index === stepIndex
                   ? 'w-7 bg-pine-600'
                   : index < stepIndex

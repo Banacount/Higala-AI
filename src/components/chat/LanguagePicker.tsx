@@ -35,7 +35,7 @@ export function LanguagePicker({ className }: { className?: string }) {
                 type="button"
                 onClick={() => setLanguage(option.value)}
                 aria-pressed={active}
-                className={`rounded-full px-2.5 py-1 text-[0.66rem] font-bold transition-all ${
+                className={`rounded-full px-2.5 py-1 text-[0.66rem] font-bold transition-colors ${
                   active
                     ? 'bg-white text-pine-900 shadow-sm'
                     : 'text-pine-900/45 hover:text-pine-800'

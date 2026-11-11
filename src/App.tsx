@@ -1,7 +1,16 @@
 import { lazy, Suspense } from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Outlet, Route, Routes } from 'react-router-dom';
 import { AppShell } from '@/components/AppShell';
 import { HomePage } from '@/pages/HomePage';
+
+// Firebase Authentication is only needed by the community and settings
+// screens. Loading the provider lazily keeps firebase/auth out of the initial
+// bundle and delays the anonymous sign-in until it is actually useful.
+const AuthProvider = lazy(() =>
+  import('@/context/AuthContext').then((module) => ({
+    default: module.AuthProvider,
+  })),
+);
 
 const ChatPage = lazy(() =>
   import('@/pages/ChatPage').then((module) => ({ default: module.ChatPage })),
@@ -68,17 +77,25 @@ export function App() {
         <Route element={<AppShell />}>
           <Route index element={<HomePage />} />
           <Route path="chat" element={<ChatPage />} />
-          <Route path="community" element={<CommunityPage />} />
-          <Route path="community/new" element={<CommunityComposePage />} />
           <Route
-            path="community/moderation"
-            element={<CommunityModerationPage />}
-          />
-          <Route path="community/:postId" element={<CommunityPostPage />} />
+            element={
+              <AuthProvider>
+                <Outlet />
+              </AuthProvider>
+            }
+          >
+            <Route path="community" element={<CommunityPage />} />
+            <Route path="community/new" element={<CommunityComposePage />} />
+            <Route
+              path="community/moderation"
+              element={<CommunityModerationPage />}
+            />
+            <Route path="community/:postId" element={<CommunityPostPage />} />
+            <Route path="settings" element={<SettingsPage />} />
+          </Route>
           <Route path="toolkit" element={<ToolkitPage />} />
           <Route path="mood" element={<MoodPage />} />
           <Route path="resources" element={<ResourcesPage />} />
-          <Route path="settings" element={<SettingsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

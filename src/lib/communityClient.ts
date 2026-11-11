@@ -4,6 +4,7 @@ import type {
   CommunityModerationQueue,
   CommunityPost,
   CommunityPostList,
+  CommunityReply,
   CommunityReportReason,
 } from '@/shared/community';
 
@@ -123,6 +124,42 @@ export function deletePost(postId: string, token: string): Promise<{ ok: true }>
   return communityPost({ action: 'delete-post', postId }, token);
 }
 
+export function createReply(
+  input: {
+    postId: string;
+    content: string;
+  },
+  token: string,
+): Promise<{ reply: CommunityReply; supportSuggested?: boolean }> {
+  return communityPost(
+    {
+      action: 'create-reply',
+      postId: input.postId,
+      content: input.content,
+    },
+    token,
+  );
+}
+
+export function deleteReply(
+  replyId: string,
+  token: string,
+): Promise<{ ok: true }> {
+  return communityPost({ action: 'delete-reply', replyId }, token);
+}
+
+export async function getCommunityReplies(
+  postId: string,
+  token: string,
+  signal?: AbortSignal,
+): Promise<CommunityReply[]> {
+  const result = await communityGet<
+    CommunityReply[] | { replies: CommunityReply[] }
+  >('replies', { postId }, token, signal);
+  if (Array.isArray(result)) return result;
+  return result.replies ?? [];
+}
+
 export function reportPost(
   input: {
     postId: string;
@@ -164,7 +201,7 @@ export function moderatePost(
 
 export function deleteMyCommunityData(
   token: string,
-): Promise<{ deletedPosts: number; deletedReports: number }> {
+): Promise<{ deletedPosts: number; deletedReports: number; deletedReplies?: number }> {
   return communityPost({ action: 'delete-my-data' }, token);
 }
 

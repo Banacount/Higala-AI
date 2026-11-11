@@ -127,7 +127,7 @@ export function BreathingTool() {
         {[0, 1, 2, 3].map((index) => (
           <span
             key={index}
-            className={`h-1.5 rounded-full transition-all ${
+            className={`h-1.5 rounded-full transition-[width,background-color] ${
               session.cycles > index
                 ? 'w-6 bg-pine-600'
                 : 'w-3 bg-pine-900/12'

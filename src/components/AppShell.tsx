@@ -83,7 +83,7 @@ export function Sidebar() {
               to={item.to}
               end={item.end}
               className={({ isActive }) =>
-                `group flex items-center gap-3 rounded-2xl px-3 py-2.5 transition-all duration-200 ${
+                `group flex items-center gap-3 rounded-2xl px-3 py-2.5 transition-colors duration-200 ${
                   isActive
                     ? 'bg-white/10 text-white shadow-[inset_0_1px_0_rgba(255,255,255,.08)]'
                     : 'text-pine-100/65 hover:bg-white/[0.055] hover:text-pine-50'
@@ -176,7 +176,7 @@ export function MobileTopBar() {
   const { openCrisis } = useApp();
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-pine-900/8 bg-cream/90 px-4 backdrop-blur-xl lg:hidden">
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-pine-900/8 bg-cream px-4 lg:hidden">
       <NavLink to="/" aria-label="Higala home">
         <Wordmark compact />
       </NavLink>
@@ -235,7 +235,7 @@ export function MobileNav() {
   return (
     <nav
       aria-label="Mobile navigation"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-pine-900/10 bg-cream/95 pb-safe backdrop-blur-xl lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-pine-900/10 bg-cream pb-safe lg:hidden"
     >
       <div className="grid grid-cols-6 px-2 pt-1.5">
         {MOBILE_ITEMS.map((item) => (

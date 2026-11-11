@@ -1,5 +1,29 @@
 import type { MoodEntry } from '@/shared/types';
 
+// Intl formatters are relatively expensive to construct, and the helpers below
+// run once per rendered message, post, or history row. Build them once instead.
+const LONG_DATE = new Intl.DateTimeFormat('en-PH', {
+  weekday: 'long',
+  month: 'long',
+  day: 'numeric',
+});
+const SHORT_DATE = new Intl.DateTimeFormat('en-PH', {
+  month: 'short',
+  day: 'numeric',
+});
+const SHORT_WEEKDAY = new Intl.DateTimeFormat('en-PH', { weekday: 'short' });
+const TIME_OF_DAY = new Intl.DateTimeFormat('en-PH', {
+  hour: 'numeric',
+  minute: '2-digit',
+});
+const SHORT_DATE_TIME = new Intl.DateTimeFormat('en-PH', {
+  month: 'short',
+  day: 'numeric',
+  hour: 'numeric',
+  minute: '2-digit',
+});
+const RELATIVE_TIME = new Intl.RelativeTimeFormat('en-PH', { numeric: 'auto' });
+
 export function todayKey(date = new Date()): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -24,31 +48,23 @@ export function lastNDays(count: number): string[] {
 }
 
 export function formatLongDate(date = new Date()): string {
-  return new Intl.DateTimeFormat('en-PH', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-  }).format(date);
+  return LONG_DATE.format(date);
 }
 
 export function formatShortDate(key: string): string {
-  return new Intl.DateTimeFormat('en-PH', {
-    month: 'short',
-    day: 'numeric',
-  }).format(dateFromKey(key));
+  return SHORT_DATE.format(dateFromKey(key));
 }
 
 export function formatWeekday(key: string): string {
-  return new Intl.DateTimeFormat('en-PH', { weekday: 'short' }).format(
-    dateFromKey(key),
-  );
+  return SHORT_WEEKDAY.format(dateFromKey(key));
 }
 
 export function formatTime(timestamp: number): string {
-  return new Intl.DateTimeFormat('en-PH', {
-    hour: 'numeric',
-    minute: '2-digit',
-  }).format(new Date(timestamp));
+  return TIME_OF_DAY.format(new Date(timestamp));
+}
+
+export function formatShortDateTime(timestamp: number): string {
+  return SHORT_DATE_TIME.format(new Date(timestamp));
 }
 
 export function dayOfYear(date = new Date()): number {
@@ -105,7 +121,7 @@ export function formatRelativeTime(timestamp: number): string {
   if (!timestamp) return '';
   const diffSeconds = Math.round((timestamp - Date.now()) / 1000);
   const abs = Math.abs(diffSeconds);
-  const formatter = new Intl.RelativeTimeFormat('en-PH', { numeric: 'auto' });
+  const formatter = RELATIVE_TIME;
 
   if (abs < 45) return formatter.format(0, 'second');
   if (abs < 3_600) return formatter.format(Math.round(diffSeconds / 60), 'minute');
