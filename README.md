@@ -363,6 +363,14 @@ automatically because they live in the root `api/` directory.
 `vercel.json` sets a longer duration for `api/chat.ts` and a shorter one for the
 community function. The SPA catch-all rewrite still applies to normal routes.
 
+> **Why `overrides.jose` exists:** `firebase-admin@14` → `jwks-rsa@4` → `jose@6`,
+> and jose 6 is ESM-only. Vercel's CommonJS function runtime cannot `require()`
+> it, which crashes the function at startup with `ERR_REQUIRE_ESM`.
+> `package.json` pins `jwks-rsa`'s `jose` to 5.x, which ships a CommonJS build and
+> is API-compatible with the only two functions jwks-rsa uses (`importJWK` and
+> `exportSPKI`). Do not remove the override while `firebase-admin` depends on
+> `jwks-rsa@4`.
+
 Verify the function directly:
 
 ```bash

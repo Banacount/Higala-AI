@@ -9,20 +9,16 @@ export function DailyQuestion() {
   const chatHref = `/chat?prompt=${encodeURIComponent(prompt.ceb)}`;
 
   return (
-    <section className="relative flex h-full flex-col overflow-hidden rounded-[1.55rem] border border-sun/20 bg-sun-soft/65 p-5 sm:p-6">
+    <section className="relative flex h-full flex-col overflow-hidden rounded-[1.55rem] border border-sun/15 bg-sun-soft/45 p-5 sm:p-6">
       <div className="pointer-events-none absolute -bottom-10 -right-8 h-32 w-32 rounded-full bg-sun/10 blur-2xl" />
-      <div className="relative flex items-center justify-between gap-3">
-        <p className="flex items-center gap-1.5 text-[0.6rem] font-extrabold uppercase tracking-[0.18em] text-[#8a6018]">
-          <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-          Today’s honest question
-        </p>
-        <span className="rounded-full bg-white/50 px-2 py-1 text-[0.54rem] font-extrabold uppercase tracking-[0.1em] text-[#8a6018]/70">
-          No yes-man
-        </span>
-      </div>
+
+      <p className="relative flex items-center gap-1.5 text-[0.6rem] font-extrabold uppercase tracking-[0.16em] text-[#8a6018]">
+        <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+        Today’s honest question
+      </p>
 
       <blockquote className="relative mt-3 flex-1">
-        <p className="text-balance font-display text-[1.35rem] font-medium leading-[1.28] text-[#4e3810] sm:text-[1.5rem]">
+        <p className="text-balance font-display text-[1.35rem] font-medium leading-[1.28] text-[#4e3810] sm:text-[1.45rem]">
           “{prompt.ceb}”
         </p>
         <p className="mt-2 text-[0.7rem] leading-relaxed text-[#72511a]/60">
@@ -30,11 +26,10 @@ export function DailyQuestion() {
         </p>
       </blockquote>
 
-      <div className="relative mt-4 flex flex-col gap-2 sm:flex-row">
+      <div className="relative mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
         <Link
           to={chatHref}
           className={buttonStyles({
-            variant: 'primary',
             size: 'sm',
             className: 'justify-between sm:justify-center',
           })}
@@ -44,11 +39,7 @@ export function DailyQuestion() {
         </Link>
         <Link
           to="/toolkit?tool=thought-record"
-          className={buttonStyles({
-            variant: 'secondary',
-            size: 'sm',
-            className: 'border-[#8a6018]/15 bg-white/55 text-[#72511a] hover:bg-white',
-          })}
+          className="inline-flex items-center justify-center gap-1.5 rounded-full px-3 py-2 text-xs font-bold text-[#72511a]/80 transition hover:bg-white/60 hover:text-[#72511a]"
         >
           <Brain className="h-3.5 w-3.5" aria-hidden="true" />
           Hunahuna check
