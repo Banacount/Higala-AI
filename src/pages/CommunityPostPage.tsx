@@ -16,6 +16,7 @@ import { CommunityAuthGate } from '@/components/community/CommunityAuthGate';
 import { CrisisSupportNote } from '@/components/community/CrisisSupportNote';
 import { PostSkeleton } from '@/components/community/PostSkeleton';
 import { ReportDialog } from '@/components/community/ReportDialog';
+import { CommunityRepliesSection } from '@/components/community/CommunityRepliesSection';
 import { useAuth } from '@/context/AuthContext';
 import { useCommunityPost } from '@/hooks/useCommunityPost';
 import {
@@ -33,7 +34,7 @@ export function CommunityPostPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const { getIdToken } = useAuth();
-  const { post, loading, error, notFound, refresh } =
+  const { post, loading, error, notFound, refresh, setPost } =
     useCommunityPost(postId);
 
   const state = (location.state ?? {}) as PostLocationState;
@@ -139,7 +140,7 @@ export function CommunityPostPage() {
                   <div className="flex flex-wrap items-center gap-2">
                     <CategoryChip category={post.category} />
                     {post.isMine ? (
-                      <span className="text-[0.6rem] font-bold uppercase tracking-[0.14em] text-pine-600">
+                      <span className="text-[0.6rem] font-bold  uppercase text-pine-600">
                         Your post
                       </span>
                     ) : null}
@@ -214,17 +215,19 @@ export function CommunityPostPage() {
                 ) : null}
               </article>
 
-              <div className="mt-4 rounded-2xl border border-pine-900/8 bg-white/55 px-4 py-4 text-sm leading-relaxed text-muted">
-                <p className="font-bold text-pine-900">
-                  Replies are not open yet
-                </p>
-                <p className="mt-1 text-xs">
-                  This first version focuses on safe, anonymous sharing. If a
-                  post feels unsafe, report it and a moderator will review it.
-                  If someone is in danger, use the crisis support button at any
-                  time.
-                </p>
-              </div>
+              <CommunityRepliesSection
+                postId={post.id}
+                onReplyCountChange={(delta) => {
+                  setPost((prev) =>
+                    prev
+                      ? {
+                          ...prev,
+                          replyCount: Math.max(0, prev.replyCount + delta),
+                        }
+                      : prev,
+                  );
+                }}
+              />
 
               <SafetyFooter />
             </div>

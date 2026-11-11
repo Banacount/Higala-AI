@@ -15,6 +15,11 @@ export interface CreatePostInput {
   category: CommunityCategory | null;
 }
 
+export interface CreateReplyInput {
+  postId: string;
+  content: string;
+}
+
 export interface ReportPostInput {
   postId: string;
   reason: CommunityReportReason;
@@ -85,7 +90,30 @@ export function parseCreatePost(body: unknown): CreatePostInput {
   return { title, content, category };
 }
 
+export function parseCreateReply(body: unknown): CreateReplyInput {
+  const record = asRecord(body);
+  const postId = parsePostId(record.postId);
+  const content = optionalText(
+    record.content,
+    COMMUNITY_LIMITS.replyContent,
+    'Your reply',
+  );
+
+  if (!content) {
+    throw new CommunityError('Write something before replying.');
+  }
+
+  return { postId, content };
+}
+
 export function parsePostId(value: unknown, label = 'Post'): string {
+  if (typeof value !== 'string' || !POST_ID_PATTERN.test(value)) {
+    throw new CommunityError(`${label} is invalid.`);
+  }
+  return value;
+}
+
+export function parseReplyId(value: unknown, label = 'Reply'): string {
   if (typeof value !== 'string' || !POST_ID_PATTERN.test(value)) {
     throw new CommunityError(`${label} is invalid.`);
   }
@@ -158,7 +186,7 @@ export function parseAction(value: unknown): string {
 }
 
 export function parseResource(value: string | null): string {
-  const allowed = new Set(['posts', 'post', 'me', 'moderation']);
+  const allowed = new Set(['posts', 'post', 'replies', 'me', 'moderation']);
   if (!value) return 'posts';
   if (!allowed.has(value)) {
     throw new CommunityError('That community resource does not exist.', 404);

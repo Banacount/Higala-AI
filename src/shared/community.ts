@@ -146,6 +146,7 @@ export function isCommunityReportReason(
 export const COMMUNITY_LIMITS = {
   title: 120,
   content: 5_000,
+  replyContent: 2_000,
   reportDescription: 1_000,
   pageSize: 10,
   maxPageSize: 20,
@@ -184,6 +185,18 @@ export interface CommunityPost {
   replyCount: number;
   reactionCounts: Record<CommunityReaction, number>;
   isMine: boolean;
+}
+
+export interface CommunityReply {
+  id: string;
+  postId: string;
+  content: string;
+  createdAt: number;
+  isMine: boolean;
+}
+
+export interface CommunityReplyList {
+  replies: CommunityReply[];
 }
 
 export interface CommunityPostList {

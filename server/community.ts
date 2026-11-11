@@ -11,21 +11,26 @@ import { screenCommunityContent, needsModeratorReview } from './communityModerat
 import {
   acceptGuidelines,
   createPost,
+  createReply,
   deleteMyCommunityData,
   deletePost,
+  deleteReply,
   getMember,
   getModerationQueue,
   getPost,
   listPosts,
+  listReplies,
   moderatePost,
   reportPost,
 } from './communityStore.ts';
 import {
   parseAction,
   parseCreatePost,
+  parseCreateReply,
   parseFeedQuery,
   parseModeratePost,
   parsePostId,
+  parseReplyId,
   parseReportPost,
   parseResource,
 } from './communityValidation.ts';
@@ -83,6 +88,12 @@ export async function handleCommunity(
         );
       }
 
+      if (resource === 'replies') {
+        const postId = parsePostId(params.get('postId') ?? params.get('id'));
+        const replies = await listReplies(identity.uid, postId);
+        return ok({ replies });
+      }
+
       if (resource === 'me') {
         return ok(await getMember(identity.uid));
       }
@@ -138,9 +149,45 @@ export async function handleCommunity(
         );
       }
 
+      case 'create-reply': {
+        const input = parseCreateReply(body);
+        const screen = screenCommunityContent(input.content);
+
+        if (screen.blockReasons.length > 0) {
+          throw new CommunityError(
+            `This reply was not published because it appears to contain ${screen.blockReasons.join(
+              ' and ',
+            )}. If you are dealing with a crisis, please use the support resources instead of posting a threat.`,
+            422,
+            'content_blocked',
+          );
+        }
+
+        const reply = await createReply(identity.uid, input, {
+          riskLevel: screen.riskLevel,
+          needsReview: needsModeratorReview(screen),
+        });
+
+        return ok(
+          {
+            reply,
+            supportSuggested:
+              screen.riskLevel === 'elevated' ||
+              screen.riskLevel === 'crisis',
+          },
+          201,
+        );
+      }
+
       case 'delete-post': {
         const postId = parsePostId(body.postId);
         await deletePost(identity.uid, postId);
+        return ok({ ok: true });
+      }
+
+      case 'delete-reply': {
+        const replyId = parseReplyId(body.replyId ?? body.id);
+        await deleteReply(identity.uid, replyId);
         return ok({ ok: true });
       }
 
