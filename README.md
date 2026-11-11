@@ -3,7 +3,7 @@
 > **Higalaay, dili yes-man.**
 > A 24/7, dialect-aware crisis first responder and psychological support web app for Kagay-anons.
 
-Higala-AI is a green-themed, mobile-first companion built with **Gemini 3** and **Firebase Hosting**. It talks like a grounded friend from Cagayan de Oro—warm, direct, and unwilling to agree just to keep the peace. It supports **Bisaya/Cebuano**, **Filipino/Tagalog**, and **English**, and it keeps the hard parts of the conversation visible.
+Higala-AI is a green-themed, mobile-first companion built with **Gemini 3** and deployed on **Vercel**. It talks like a grounded friend from Cagayan de Oro—warm, direct, and unwilling to agree just to keep the peace. It supports **Bisaya/Cebuano**, **Filipino/Tagalog**, and **English**, and it keeps the hard parts of the conversation visible.
 
 The original brief describes a tool that is not another passive, overly agreeable chatbot. Higala is designed around **radical candor**: it validates the feeling, challenges the distorted story, names harmful choices, and still stays in your corner.
 
@@ -17,9 +17,10 @@ The original brief describes a tool that is not another passive, overly agreeabl
 - **Crisis-first safety** — client-side and server-side screening catch direct self-harm and suicide language. A crisis strip, one-tap crisis modal, and verified Philippine hotlines are always within reach.
 - **Structured psychological tools** — box breathing, 5-4-3-2-1 grounding, CBT thought records, a 90-second anger pause, a safety plan, and a mood check-in.
 - **Mood tracking** — daily check-ins, tags, notes, a 7-day chart, a streak, and a plain-language read on the week.
-- **Local-first privacy** — profile, moods, thought records, safety plan, and chat history live in `localStorage`. There is no account and no database.
+- **Local-first personal data** — profile, moods, thought records, safety plan, and chat history live in `localStorage`. Anonymous Sharing adds a separate server-side community, but that local data is never attached to posts.
+- **Anonymous Sharing (Phase 1)** — a moderated community feed where signed-in anonymous accounts can publish uncategorized or categorized reflections, browse by category, read a post, delete their own post, report unsafe content, and accept the community guidelines before their first post.
 - **Offline/demo mode** — without a Gemini API key, a rule-based Higala response engine keeps the app usable and testable. These replies are labelled `Demo`, never passed off as live AI.
-- **Data ownership** — export everything as JSON or clear individual data types (or everything) from Settings.
+- **Data ownership** — export everything as JSON or clear individual data types (or everything) from Settings. Settings also deletes all of your community data.
 
 ---
 
@@ -34,11 +35,13 @@ The original brief describes a tool that is not another passive, overly agreeabl
 | Icons | lucide-react |
 | Markdown | react-markdown + remark-gfm |
 | AI | Gemini 3 via `@google/genai` |
-| Server (dev) | Vite middleware at `/api/chat` |
-| Server (prod) | Firebase Cloud Function `chat`, or Vercel Function `api/chat.ts` |
-| Hosting | Firebase Hosting or Vercel |
+| Auth (community) | Firebase Anonymous Auth |
+| Database (community) | Firestore via Firebase Admin SDK (server only) |
+| Server (dev) | Vite middleware at `/api/chat` and `/api/community` |
+| Server (prod) | Vercel Functions `api/chat.ts` and `api/community.ts` |
+| Hosting | Vercel |
 
-The Gemini key is **server-side only**. It is read from `GEMINI_API_KEY` by the dev middleware and by the Cloud Function secret in production. It is never exposed as a `VITE_` variable.
+The Gemini key is **server-side only**. It is read from `GEMINI_API_KEY` by the dev middleware and by the Vercel Function environment. It is never exposed as a `VITE_` variable. Firebase Admin credentials are also server-only; the browser only receives the public Firebase client configuration needed for anonymous sign-in.
 
 ---
 
@@ -83,6 +86,9 @@ Leave `GEMINI_API_KEY` empty. The app runs in **demo mode**: the shared demo eng
 | `npm run build:functions` | Bundle `server/functions.ts` into `functions/lib/index.js` with esbuild. |
 | `npm run build:all` | Build the client and the Cloud Function. |
 | `npm run deploy` | Build everything, then run `firebase deploy`. |
+| `npm run deploy:rules` | Deploy `firestore.rules` and `firestore.indexes.json` with the Firebase CLI. |
+| `npm run emulators` | Start the Firebase Auth and Firestore emulators for local community testing. |
+| `npm run set-admin -- <uid>` | Grant the `admin: true` custom claim used by the moderation queue. Add `--remove` to revoke it. |
 
 ---
 
@@ -91,22 +97,34 @@ Leave `GEMINI_API_KEY` empty. The app runs in **demo mode**: the shared demo eng
 ```text
 api/
   chat.ts            Vercel Function adapter for `/api/chat`
+  community.ts       Vercel Function adapter for `/api/community`
 server/
   chat.ts            Shared Gemini handler, validation, safety, offline fallback
-  functions.ts       Firebase Function adapter and secret binding
+  community.ts       Shared community handler: auth, validation, rate limits, DTOs
+  communityAuth.ts   Firebase ID-token verification and admin claims
+  communityStore.ts  Admin-SDK Firestore reads/writes, cursors, moderation
+  communityValidation.ts  Server-side input validation and limits
+  communityModeration.ts  Rule-based policy checks (crisis kept separate)
+  firebaseAdmin.ts   Lazy Firebase Admin initialization
+  http.ts            Shared JSON/body/rate-limit helpers for community adapters
+  functions.ts       Legacy Firebase Function adapter for chat
 src/
   components/        Layout, chat, tools, home cards, UI primitives
-  context/           Profile, mood, thought record, safety plan, crisis state
-  hooks/             Local storage and chat state
-  lib/               Constants, chat client, formatting helpers
-  pages/             Home, Chat, Toolkit, Mood, Resources, Settings
-  shared/            Types, prompt, safety rules, demo response engine
+  components/community/  Feed, post, report, guidelines, and safety pieces
+  context/           Local personal data, crisis state, anonymous auth
+  hooks/             Local storage, chat state, community feed/post loading
+  lib/               Constants, chat client, community client, Firebase client
+  pages/             Home, Chat, Community, Toolkit, Mood, Resources, Settings
+  shared/            Types, prompts, safety rules, community types/guidelines
 scripts/
   build-functions.mjs
+  set-admin.mjs      Grant or revoke the moderator custom claim
 functions/
-  package.json       Cloud Function package manifest
+  package.json       Legacy Cloud Function package manifest
   lib/               Generated bundle (gitignored)
-firebase.json        Hosting rewrites, headers, function config
+firestore.rules      Deny-all client access; Admin SDK is the only path
+firestore.indexes.json  Feed, report, and moderation composite indexes
+firebase.json        Legacy Hosting/Function config plus Firestore rules/indexes
 ```
 
 ### Request flow
@@ -129,7 +147,139 @@ The server never trusts the client's risk assessment alone: it screens the last 
 
 ---
 
+## Anonymous Sharing (Phase 1)
+
+Anonymous Sharing is a separate, moderated community surface. It does **not** move or attach any personal Higala data (profile, moods, thought records, safety plan, chat) to community posts.
+
+### Architecture
+
+```text
+Browser (Firebase Anonymous Auth only)
+  └─ GET/POST /api/community  (Authorization: Bearer <Firebase ID token>)
+       ├─ Vite dev/preview middleware (local)
+       └─ Vercel Function api/community.ts (production)
+            └─ handleCommunity()
+                 ├─ verify the Firebase ID token and derive the UID
+                 ├─ read the admin custom claim for moderation
+                 ├─ validate input + rate-limit by UID in Firestore
+                 ├─ screen crisis separately from policy moderation
+                 ├─ read/write Firestore through the Firebase Admin SDK
+                 └─ return sanitized public DTOs
+```
+
+The browser **never** imports the Firestore client SDK. `firestore.rules` denies every client read and write; the Admin SDK is the only path to the data. Responses never include `authorId`, `reporterId`, the Firebase UID, email, or profile data. Ownership is expressed only as a server-computed `isMine` boolean.
+
+### What Phase 1 includes
+
+- Anonymous post creation with optional title, required content, and optional category.
+- Anonymous feed with category filters and cursor pagination.
+- Individual post view.
+- Delete your own post (server-checked ownership; content is redacted).
+- Community guidelines shown and accepted before the first post.
+- Basic reporting of posts with private reporter identity and duplicate-report prevention.
+- A minimal moderator queue: hide, restore, and dismiss reports.
+- Private crisis screening that never treats suicidal or self-harm expression as a guideline violation and never auto-removes it.
+- A Settings control that deletes all of your community data.
+
+Phase 2 interactions (supportive reactions and anonymous replies) are intentionally **not** implemented yet. The data shape and DTOs leave room for them.
+
+### Firestore collections
+
+| Collection | Purpose |
+| --- | --- |
+| `communityPosts/{postId}` | Public post fields plus private `authorId`, `riskLevel`, review flags |
+| `communityReports/{postId}_{uid}` | One report per member per post; private `reporterId` |
+| `communityMembers/{uid}` | Guidelines acceptance and UID-based rate-limit windows |
+
+Reply and reaction subcollections are reserved for Phase 2. `communityPosts/.../replies` and `.../reactions` are not read or written yet.
+
+### Firebase services to configure
+
+1. **Authentication → Sign-in method → Anonymous** — enable it.
+2. **Firestore Database** — create the database (production mode is fine; the app's rules deny direct client access anyway).
+3. Deploy the rules and indexes from this repo:
+
+```bash
+firebase login
+firebase use --add          # select the project once
+npm run deploy:rules
+```
+
+Do **not** deploy Firebase Hosting or a community Cloud Function for this feature. Vercel serves the app and runs `api/community.ts`; Firebase provides only Anonymous Auth and Firestore.
+
+### Environment variables for Vercel
+
+Client (public, but still configure them as Vercel environment variables):
+
+- `VITE_FIREBASE_API_KEY`
+- `VITE_FIREBASE_AUTH_DOMAIN`
+- `VITE_FIREBASE_PROJECT_ID`
+- `VITE_FIREBASE_APP_ID`
+
+Server (never prefix these with `VITE_`):
+
+- `FIREBASE_PROJECT_ID`
+- `FIREBASE_CLIENT_EMAIL`
+- `FIREBASE_PRIVATE_KEY` (keep the newlines; literal `\n` is also accepted)
+- or `FIREBASE_SERVICE_ACCOUNT_JSON` with the full service-account JSON
+
+Create the service account in **Firebase console → Project settings → Service accounts → Generate new private key**. Grant it only the access it needs (Firebase Admin SDK / Cloud Datastore access). Store the values in **Vercel → Project Settings → Environment Variables** for Production, Preview, and Development. Redeploy after changing them.
+
+### Local development and testing
+
+**Option A — real Firebase project.** Put the client and Admin values in `.env` (copy `.env.example`). The Vite dev server exposes `/api/community` through middleware, so `npm run dev` exercises the same handler Vercel uses.
+
+**Option B — emulators.**
+
+```bash
+npm run emulators
+```
+
+In `.env`, use dummy client values plus the emulator hosts:
+
+```dotenv
+VITE_FIREBASE_API_KEY=demo-key
+VITE_FIREBASE_AUTH_DOMAIN=localhost
+VITE_FIREBASE_PROJECT_ID=demo-higala
+VITE_FIREBASE_APP_ID=demo-app
+VITE_FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099
+FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099
+FIRESTORE_EMULATOR_HOST=127.0.0.1:8080
+FIREBASE_PROJECT_ID=demo-higala
+```
+
+Then `npm run dev`. Visit `/community`, accept the guidelines, publish a post, open it, report it from a second anonymous browser profile, and check `/community/moderation` after granting a moderator claim:
+
+```bash
+npm run set-admin -- <anonymous-uid>
+```
+
+The anonymous UID is visible in the Firebase Auth emulator UI, not in the public app.
+
+### Privacy and moderation behaviour
+
+- Post authors are shown as `Anonymous`; replies (Phase 2) will show `Anonymous friend`.
+- Crisis screening reuses `src/shared/safety.ts`. A crisis signal sets a **private** `riskLevel` and a review flag for moderators, shows the author compassionate support resources, and never becomes a policy violation.
+- Ordinary policy checks block only high-confidence threats and encouragement of self-harm. Personal-information and dangerous-advice matches are flagged for human review instead of being silently removed.
+- Reporting never auto-hides a post. Repeated reports flag it for a moderator, which reduces brigading.
+- Moderation actions require the Firebase custom claim `admin: true`. The queue is at `/community/moderation`.
+- Anonymous publishing is not absolute anonymity against platform operators, infrastructure providers, or legally required disclosures. The UI states this before publishing, and users are warned not to post names, addresses, phone numbers, or other identifying details.
+
+### Known community limitations
+
+- Anonymous identity is device-bound. Clearing browser storage loses the anonymous account and the ability to manage old posts.
+- Firestore and Firebase Auth are still external infrastructure; content is readable by the server and by operators with credentials.
+- The moderation queue is minimal and still needs a human moderator. Reports do not resolve themselves.
+- UID-based rate limits can be bypassed by creating new anonymous accounts. Vercel/platform rate limiting and Firebase App Check are the next hardening steps.
+
+---
+
 ## Firebase deployment
+
+Vercel is the primary deployment for Higala, including Anonymous Sharing. This
+section is kept for deployments that still use Firebase Hosting for the
+chat-only app. Anonymous Sharing is **not** deployed through Firebase Hosting or
+Cloud Functions; it runs in `api/community.ts` on Vercel.
 
 The repo is wired for Firebase Hosting plus one Cloud Function. `.firebaserc` currently contains the placeholder project `higala-ai`; change it to your project.
 
@@ -191,18 +341,27 @@ npm run build:functions && firebase deploy --only functions
 
 ## Vercel deployment
 
-Vercel needs a **server-side function** for the Gemini call. The browser only
-knows about `/api/chat`; it must never receive the API key. `api/chat.ts` is that
-function, and Vercel detects it automatically because it lives in the root
-`api/` directory.
+Vercel needs **server-side functions** for the Gemini call and for the
+community. The browser only knows about `/api/chat` and `/api/community`; it
+must never receive the Gemini key or Firebase Admin credentials. `api/chat.ts`
+and `api/community.ts` are those functions, and Vercel detects them
+automatically because they live in the root `api/` directory.
 
 1. Import the repository in Vercel. The Vite preset builds the client into
    `dist/`; no build override is required.
 2. In **Project Settings → Environment Variables**, add:
    - `GEMINI_API_KEY` — your Gemini key. **Do not** prefix it with `VITE_`.
    - `GEMINI_MODEL` — optional; defaults to `gemini-3.5-flash`.
+   - `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`,
+     `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_APP_ID` — the public Firebase
+     client config for Anonymous Auth.
+   - `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`
+     (or `FIREBASE_SERVICE_ACCOUNT_JSON`) — **server-only** Admin credentials.
 3. Apply the variables to **Production**, **Preview**, and **Development**.
 4. Redeploy. Environment variable changes only take effect on a new deployment.
+
+`vercel.json` sets a longer duration for `api/chat.ts` and a shorter one for the
+community function. The SPA catch-all rewrite still applies to normal routes.
 
 Verify the function directly:
 
@@ -240,7 +399,7 @@ the route).
 
 ## Privacy and data
 
-Stored locally under these keys:
+**Personal Higala data** is stored locally under these keys:
 
 | Key | Data |
 | --- | --- |
@@ -250,7 +409,21 @@ Stored locally under these keys:
 | `higala.safety.v1` | Safety plan |
 | `higala.chat.v1` | Last 80 chat messages |
 
-When a live Gemini key is configured, chat messages are sent to Google's Gemini API to generate a response. Everything else stays in the browser. There are no analytics or advertising scripts in the app. Settings includes a JSON export and clear controls.
+When a live Gemini key is configured, chat messages are sent to Google's Gemini API to generate a response. The rest of the personal data stays in the browser and is never attached to community posts. There are no analytics or advertising scripts in the app. Settings includes a JSON export and clear controls.
+
+**Anonymous Sharing data** is different:
+
+- Posts, reports, and guidelines acceptance are stored in Firestore.
+- Each record is linked only to a random Firebase Anonymous Auth UID.
+- The browser never reads or writes Firestore directly; deny-all rules block it.
+- API responses omit `authorId`, `reporterId`, the UID, email, and profile data. Authorship is exposed only as a server-computed `isMine` boolean.
+- Settings → **Anonymous Sharing data → Delete my community data** removes your posts, reports, and guidelines acceptance. It does not touch local personal data.
+- Anonymous publishing does not guarantee anonymity against platform operators, infrastructure providers, or legally required disclosures. Avoid posting identifying details about yourself or anyone else.
+
+Crisis screening and ordinary moderation are separate. Distress, grief, and
+suicidal thoughts are never treated as guideline violations and are never
+auto-removed. They surface support resources and create a private review flag so
+a moderator can offer help.
 
 ---
 
@@ -275,5 +448,8 @@ Numbers can change. If a line does not answer, call 911 or go to the nearest eme
 - Crisis screening is pattern-based and deliberately conservative; it is not a clinical risk assessment.
 - The AI can be wrong. It should not be used as the only support for someone in crisis.
 - Chat history and tools are per-browser. There is no cross-device sync by design.
+- Anonymous community identity is device-bound. Clearing browser storage loses the ability to manage old posts.
+- Community moderation is human-dependent. Reports only help when someone reviews them.
+- AI-assisted moderation is not part of Phase 1; the current policy checks are rule-based and intentionally conservative.
 - The app has not been clinically validated. A production mental-health deployment should involve licensed professionals, local safeguarding review, and a clear escalation path.
-- Firebase deployment requires your own project, billing for Cloud Functions, and a Gemini API key.
+- Vercel deployment requires your own project, Firebase Auth/Firestore configuration, and a Gemini API key.

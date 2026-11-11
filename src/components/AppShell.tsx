@@ -9,6 +9,7 @@ import {
   Settings2,
   Sparkles,
   Sprout,
+  Users,
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { Wordmark } from '@/components/BrandMark';
@@ -23,6 +24,13 @@ const NAV_ITEMS = [
     label: 'Kaistorya',
     english: 'Talk',
     icon: MessageCircle,
+    end: false,
+  },
+  {
+    to: '/community',
+    label: 'Komunidad',
+    english: 'Community',
+    icon: Users,
     end: false,
   },
   {
@@ -217,6 +225,7 @@ export function AppShell() {
 const MOBILE_ITEMS = [
   { to: '/', label: 'Home', icon: House, end: true },
   { to: '/chat', label: 'Talk', icon: MessageCircle, end: false },
+  { to: '/community', label: 'Share', icon: Users, end: false },
   { to: '/toolkit', label: 'Tools', icon: Sprout, end: false },
   { to: '/mood', label: 'Mood', icon: HeartPulse, end: false },
   { to: '/resources', label: 'Help', icon: LifeBuoy, end: false },
@@ -228,7 +237,7 @@ export function MobileNav() {
       aria-label="Mobile navigation"
       className="fixed inset-x-0 bottom-0 z-40 border-t border-pine-900/10 bg-cream/95 pb-safe backdrop-blur-xl lg:hidden"
     >
-      <div className="grid grid-cols-5 px-2 pt-1.5">
+      <div className="grid grid-cols-6 px-2 pt-1.5">
         {MOBILE_ITEMS.map((item) => (
           <NavLink
             key={item.to}

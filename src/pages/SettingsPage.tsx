@@ -5,18 +5,22 @@ import {
   Check,
   Download,
   HeartPulse,
+  Loader2,
   LockKeyhole,
   MessageCircle,
   ShieldCheck,
   Sparkles,
   Trash2,
   UserRound,
+  Users,
 } from 'lucide-react';
 import { STORAGE_KEYS, useApp } from '@/context/AppContext';
+import { useAuth } from '@/context/AuthContext';
 import { PageHeader, PageShell, SafetyFooter } from '@/components/PageShell';
 import { Badge } from '@/components/ui/Badge';
 import { Button, buttonStyles } from '@/components/ui/Button';
 import { LANGUAGE_OPTIONS } from '@/lib/constants';
+import { deleteMyCommunityData } from '@/lib/communityClient';
 import { formatLongDate, initials, todayKey } from '@/lib/utils';
 
 function readArray(key: string): unknown[] {
@@ -93,8 +97,12 @@ const PRIVACY_POINTS = [
     body: 'Your messages are sent to Google’s Gemini API to generate a reply. The API key stays on the server, never in this browser. With no key configured, Higala uses offline demo responses.',
   },
   {
-    title: 'Everything else stays on this device',
-    body: 'Your profile, mood check-ins, thought records, safety plan, and chat history are stored in this browser’s localStorage. There is no account and no database.',
+    title: 'Your personal Higala data stays on this device',
+    body: 'Your profile, mood check-ins, thought records, safety plan, and chat history are stored in this browser’s localStorage. They are not sent to Anonymous Sharing and are not synced to another device.',
+  },
+  {
+    title: 'Anonymous Sharing uses a private anonymous account',
+    body: 'Community posts and reports are stored in Higala’s Firebase database and linked only to a random anonymous account ID. Your name, local profile, chat, moods, and safety plan are never attached. Platform operators, infrastructure providers, and legally required disclosures may still be able to link content to that anonymous ID.',
   },
   {
     title: 'No analytics, no tracking scripts',
@@ -118,9 +126,11 @@ export function SettingsPage() {
     clearThoughtRecords,
     clearAllData,
   } = useApp();
+  const { status: authStatus, getIdToken } = useAuth();
 
   const [chatCount, setChatCount] = useState(() => readArray(STORAGE_KEYS.chat).length);
   const [notice, setNotice] = useState('');
+  const [communityBusy, setCommunityBusy] = useState(false);
 
   const saveNotice = (message: string) => setNotice(message);
 
@@ -152,13 +162,51 @@ export function SettingsPage() {
   const clearEverything = () => {
     if (
       !window.confirm(
-        'Clear ALL Higala data on this device? This removes your profile, moods, thought records, safety plan, and chat. It cannot be undone.',
+        'Clear ALL local Higala data on this device? This removes your profile, moods, thought records, safety plan, and chat. It cannot be undone. Community posts are stored separately and are not removed by this action.',
       )
     ) {
       return;
     }
     saveNotice('Clearing all local data…');
     clearAllData();
+  };
+
+  const clearCommunityData = async () => {
+    if (authStatus !== 'ready') {
+      saveNotice(
+        'Community sign-in is not available right now, so community data cannot be deleted from this screen.',
+      );
+      return;
+    }
+    if (
+      !window.confirm(
+        'Delete ALL your Anonymous Sharing posts, reports, and accepted guidelines? Your local profile, moods, and chats are not affected. This cannot be undone.',
+      )
+    ) {
+      return;
+    }
+
+    setCommunityBusy(true);
+    saveNotice('Deleting your community data…');
+    try {
+      const token = await getIdToken();
+      const result = await deleteMyCommunityData(token);
+      saveNotice(
+        `Community data deleted: ${result.deletedPosts} post${
+          result.deletedPosts === 1 ? '' : 's'
+        } and ${result.deletedReports} report${
+          result.deletedReports === 1 ? '' : 's'
+        }.`,
+      );
+    } catch (cause) {
+      saveNotice(
+        cause instanceof Error
+          ? cause.message
+          : 'Community data could not be deleted.',
+      );
+    } finally {
+      setCommunityBusy(false);
+    }
   };
 
   const exportData = () => {
@@ -380,6 +428,35 @@ export function SettingsPage() {
             </div>
           </SettingCard>
 
+          <SettingCard
+            icon={<Users className="h-5 w-5" aria-hidden="true" />}
+            title="Anonymous Sharing data"
+            description="Posts and reports you sent to the community live on Higala’s server, linked only to a random anonymous ID. Your local profile is never attached."
+          >
+            <div className="rounded-xl border border-pine-900/6 bg-cream/65 p-3.5">
+              <p className="text-[0.7rem] leading-relaxed text-muted">
+                Deleting removes every community post you wrote, every report you
+                sent, and your stored guidelines acceptance. It does not touch
+                your profile, moods, thought records, safety plan, or chats on
+                this device.
+              </p>
+            </div>
+            <Button
+              variant="danger"
+              size="md"
+              onClick={() => void clearCommunityData()}
+              disabled={communityBusy}
+              className="mt-3 w-full"
+            >
+              {communityBusy ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+              ) : (
+                <Trash2 className="h-4 w-4" aria-hidden="true" />
+              )}
+              {communityBusy ? 'Deleting…' : 'Delete my community data'}
+            </Button>
+          </SettingCard>
+
           <section className="rounded-[1.5rem] border border-clay/20 bg-clay-soft/70 p-5 sm:p-6">
             <div className="flex items-start gap-3">
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white/65 text-clay">
@@ -391,7 +468,9 @@ export function SettingsPage() {
                 </h2>
                 <p className="mt-0.5 text-[0.7rem] leading-relaxed text-[#7a4128]/75">
                   Removes your profile, moods, thought records, safety plan, and
-                  chat from this browser. This cannot be undone.
+                  chat from this browser. This cannot be undone, and it does not
+                  remove community posts—use the community control above for
+                  that.
                 </p>
               </div>
             </div>
@@ -414,7 +493,7 @@ export function SettingsPage() {
             <div className="flex flex-wrap items-center gap-2">
               <Badge tone="mint">v1.0.0</Badge>
               <Badge tone="cream">Gemini 3</Badge>
-              <Badge tone="cream">Firebase Hosting</Badge>
+              <Badge tone="cream">Vercel · Firebase</Badge>
               <Badge tone="sun">No yes-man</Badge>
             </div>
             <p className="mt-3 text-[0.7rem] leading-relaxed text-muted">
