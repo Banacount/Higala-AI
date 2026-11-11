@@ -11,11 +11,16 @@
     "typecheck": "tsc --noEmit",
     "build:functions": "node scripts/build-functions.mjs",
     "build:all": "npm run build && npm run build:functions",
-    "deploy": "npm run build:all && firebase deploy"
+    "deploy": "npm run build:all && firebase deploy",
+    "deploy:rules": "firebase deploy --only firestore:rules,firestore:indexes",
+    "emulators": "firebase emulators:start --only auth,firestore",
+    "set-admin": "node --env-file=.env scripts/set-admin.mjs"
   },
   "dependencies": {
     "@google/genai": "^3.0.0",
     "clsx": "^2.1.1",
+    "firebase": "^13.2.0",
+    "firebase-admin": "^14.5.0",
     "lucide-react": "^1.70.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",

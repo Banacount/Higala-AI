@@ -24,6 +24,26 @@ const SettingsPage = lazy(() =>
     default: module.SettingsPage,
   })),
 );
+const CommunityPage = lazy(() =>
+  import('@/pages/CommunityPage').then((module) => ({
+    default: module.CommunityPage,
+  })),
+);
+const CommunityComposePage = lazy(() =>
+  import('@/pages/CommunityComposePage').then((module) => ({
+    default: module.CommunityComposePage,
+  })),
+);
+const CommunityPostPage = lazy(() =>
+  import('@/pages/CommunityPostPage').then((module) => ({
+    default: module.CommunityPostPage,
+  })),
+);
+const CommunityModerationPage = lazy(() =>
+  import('@/pages/CommunityModerationPage').then((module) => ({
+    default: module.CommunityModerationPage,
+  })),
+);
 
 function PageLoader() {
   return (
@@ -48,6 +68,13 @@ export function App() {
         <Route element={<AppShell />}>
           <Route index element={<HomePage />} />
           <Route path="chat" element={<ChatPage />} />
+          <Route path="community" element={<CommunityPage />} />
+          <Route path="community/new" element={<CommunityComposePage />} />
+          <Route
+            path="community/moderation"
+            element={<CommunityModerationPage />}
+          />
+          <Route path="community/:postId" element={<CommunityPostPage />} />
           <Route path="toolkit" element={<ToolkitPage />} />
           <Route path="mood" element={<MoodPage />} />
           <Route path="resources" element={<ResourcesPage />} />

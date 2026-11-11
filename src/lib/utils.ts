@@ -100,3 +100,21 @@ export function clamp(value: number, min: number, max: number): number {
 export function titleCase(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
+
+export function formatRelativeTime(timestamp: number): string {
+  if (!timestamp) return '';
+  const diffSeconds = Math.round((timestamp - Date.now()) / 1000);
+  const abs = Math.abs(diffSeconds);
+  const formatter = new Intl.RelativeTimeFormat('en-PH', { numeric: 'auto' });
+
+  if (abs < 45) return formatter.format(0, 'second');
+  if (abs < 3_600) return formatter.format(Math.round(diffSeconds / 60), 'minute');
+  if (abs < 86_400) return formatter.format(Math.round(diffSeconds / 3_600), 'hour');
+  if (abs < 2_592_000) {
+    return formatter.format(Math.round(diffSeconds / 86_400), 'day');
+  }
+  if (abs < 31_536_000) {
+    return formatter.format(Math.round(diffSeconds / 2_592_000), 'month');
+  }
+  return formatter.format(Math.round(diffSeconds / 31_536_000), 'year');
+}
