@@ -34,7 +34,7 @@ export function ChatComposer({
         event.preventDefault();
         submit();
       }}
-      className="rounded-[1.4rem] border border-pine-900/10 bg-white/85 p-2 shadow-[0_18px_50px_-30px_rgba(7,37,28,.45)] backdrop-blur-sm transition-colors focus-within:border-pine-400/60 focus-within:bg-white"
+      className="rounded-[1.4rem] border border-pine-900/10 bg-white p-2 shadow-[0_18px_50px_-30px_rgba(7,37,28,.45)] transition-colors focus-within:border-pine-400/60 focus-within:bg-white"
     >
       <label htmlFor="chat-message" className="sr-only">
         Message Higala

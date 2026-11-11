@@ -79,7 +79,7 @@ export function ChatPage() {
 
   return (
     <div className="flex h-[calc(100dvh-8rem)] flex-col overflow-hidden lg:h-dvh">
-      <header className="shrink-0 border-b border-pine-900/8 bg-cream/72 backdrop-blur-xl">
+      <header className="shrink-0 border-b border-pine-900/8 bg-cream">
         <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-2 px-4 py-3 sm:px-6">
           <div className="flex min-w-0 items-center gap-2.5">
             <div className="relative shrink-0">
@@ -189,7 +189,7 @@ export function ChatPage() {
         </div>
       </div>
 
-      <div className="shrink-0 border-t border-pine-900/8 bg-cream/92 px-3 pb-2 pt-2.5 backdrop-blur-xl sm:px-6 sm:pb-3">
+      <div className="shrink-0 border-t border-pine-900/8 bg-cream px-3 pb-2 pt-2.5 sm:px-6 sm:pb-3">
         <div className="mx-auto max-w-3xl">
           <ChatCrisisStrip riskLevel={riskLevel} />
           <ChatComposer

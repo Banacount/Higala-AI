@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { Button } from '@/components/ui/Button';
+import { formatShortDateTime } from '@/lib/utils';
 import type { SafetyPlan } from '@/shared/types';
 
 const FIELDS: Array<{
@@ -197,12 +198,7 @@ export function SafetyPlanTool() {
       ) : safetyPlan.updatedAt ? (
         <p className="text-[0.66rem] text-muted">
           Last saved{' '}
-          {new Intl.DateTimeFormat('en-PH', {
-            month: 'short',
-            day: 'numeric',
-            hour: 'numeric',
-            minute: '2-digit',
-          }).format(new Date(safetyPlan.updatedAt))}
+          {formatShortDateTime(safetyPlan.updatedAt)}
           .
         </p>
       ) : null}

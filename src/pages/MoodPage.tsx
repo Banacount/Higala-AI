@@ -139,7 +139,7 @@ export function MoodPage() {
                   onClick={() => updateTodayMood({ level })}
                   aria-pressed={selected}
                   aria-label={`${mood.label} — ${mood.sublabel}`}
-                  className={`group flex flex-col items-center gap-1 rounded-2xl border px-1 py-2.5 transition-all duration-200 ${
+                  className={`group flex flex-col items-center gap-1 rounded-2xl border px-1 py-2.5 transition duration-200 ${
                     selected
                       ? 'border-pine-400 bg-pine-50 shadow-sm'
                       : 'border-pine-900/8 bg-white/45 hover:-translate-y-0.5 hover:border-pine-200 hover:bg-pine-50'
@@ -255,7 +255,7 @@ export function MoodPage() {
                   >
                     <div className="flex w-full flex-1 items-end">
                       <div
-                        className="w-full rounded-t-[0.45rem] transition-all duration-300"
+                        className="w-full rounded-t-[0.45rem] transition-[height,background-color] duration-300"
                         style={{
                           height: entry ? `${12 + entry.level * 13}px` : '4px',
                           backgroundColor: entry

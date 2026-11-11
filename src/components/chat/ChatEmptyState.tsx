@@ -57,7 +57,7 @@ export function ChatEmptyState({
             key={suggestion.text}
             type="button"
             onClick={() => onPick(suggestion.text)}
-            className={`group flex animate-fade-up items-start gap-2.5 rounded-2xl border border-pine-900/8 bg-white/65 p-3 text-left transition-all hover:-translate-y-0.5 hover:border-pine-300 hover:bg-white hover:shadow-lift ${DELAYS[index] ?? ''}`}
+            className={`group flex animate-fade-up items-start gap-2.5 rounded-2xl border border-pine-900/8 bg-white/65 p-3 text-left transition hover:-translate-y-0.5 hover:border-pine-300 hover:bg-white hover:shadow-lift ${DELAYS[index] ?? ''}`}
           >
             <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-pine-100 text-pine-700">
               <suggestion.icon className="h-3.5 w-3.5" aria-hidden="true" />

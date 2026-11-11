@@ -270,18 +270,8 @@ export async function createPost(
     needsReview: boolean;
   },
 ): Promise<CommunityPost> {
-  const member = await getMember(uid);
-  if (!member.guidelinesAcceptedAt) {
-    throw new CommunityError(
-      'Please read and accept the community guidelines before your first post.',
-      403,
-      'guidelines_required',
-    );
-  }
-
   const db = getCommunityFirestore();
-  await enforceRateLimit(db, uid, 'post');
-
+  const memberRef = db.collection(MEMBERS).doc(uid);
   const ref = db.collection(POSTS).doc();
   const now = Timestamp.now();
   const reactionCounts = emptyReactionCounts();
@@ -300,7 +290,47 @@ export async function createPost(
     updatedAt: now,
   };
 
-  await ref.create(data);
+  // Guidelines, per-member rate limit, and the post itself share one
+  // transaction: a create now costs one Firestore round trip instead of three.
+  await db.runTransaction(async (transaction) => {
+    const memberSnapshot = await transaction.get(memberRef);
+    const member = memberSnapshot.data() ?? {};
+
+    if (timestampMillis(member.guidelinesAcceptedAt) <= 0) {
+      throw new CommunityError(
+        'Please read and accept the community guidelines before your first post.',
+        403,
+        'guidelines_required',
+      );
+    }
+
+    const windowStart = timestampMillis(member.postWindowStart);
+    const windowCount = readNumber(member.postWindowCount);
+    const nowMillis = now.toMillis();
+    let nextStart = nowMillis;
+    let nextCount = 1;
+
+    if (windowStart > 0 && nowMillis - windowStart < POST_WINDOW_MS) {
+      if (windowCount >= POST_WINDOW_MAX) {
+        throw new CommunityRateLimitError(
+          'You are sharing very quickly. Take a breath and try again in a few minutes.',
+        );
+      }
+      nextStart = windowStart;
+      nextCount = windowCount + 1;
+    }
+
+    transaction.set(
+      memberRef,
+      {
+        postWindowStart: Timestamp.fromMillis(nextStart),
+        postWindowCount: nextCount,
+        updatedAt: now,
+      },
+      { merge: true },
+    );
+    transaction.create(ref, data);
+  });
 
   return {
     id: ref.id,
@@ -346,19 +376,21 @@ export async function listPosts(
   }
 
   const snapshot = await query.get();
-  const docs = snapshot.docs.slice(0, options.limit);
+  const ordered = snapshot.docs.map((doc) => ({
+    doc,
+    data: doc.data() as CommunityPostDoc,
+  }));
+  const docs = ordered.slice(0, options.limit);
   const nextCursor =
-    snapshot.docs.length > options.limit && docs.length > 0
+    ordered.length > options.limit && docs.length > 0
       ? encodeCursor(
-          timestampMillis(docs[docs.length - 1].data().createdAt),
-          docs[docs.length - 1].id,
+          timestampMillis(docs[docs.length - 1].data.createdAt),
+          docs[docs.length - 1].doc.id,
         )
       : null;
 
   return {
-    posts: docs.map((doc) =>
-      toPublicPost(doc.id, doc.data() as CommunityPostDoc, uid),
-    ),
+    posts: docs.map(({ doc, data }) => toPublicPost(doc.id, data, uid)),
     nextCursor,
   };
 }
@@ -390,19 +422,29 @@ async function dismissOpenReportsForPosts(
   db: Firestore,
   postIds: string[],
 ): Promise<void> {
+  if (postIds.length === 0) return;
+
   const now = Timestamp.now();
-  for (const postId of postIds) {
+
+  // Firestore allows at most 30 values in an `in` query and 500 writes per
+  // batch. Chunking keeps this linear in the number of posts instead of
+  // issuing one query per post.
+  for (let index = 0; index < postIds.length; index += 30) {
+    const chunk = postIds.slice(index, index + 30);
     const openReports = await db
       .collection(REPORTS)
-      .where('postId', '==', postId)
+      .where('postId', 'in', chunk)
       .where('status', '==', 'open')
       .get();
     if (openReports.empty) continue;
-    const batch = db.batch();
-    for (const report of openReports.docs) {
-      batch.update(report.ref, { status: 'dismissed', reviewedAt: now });
+
+    for (let start = 0; start < openReports.docs.length; start += 450) {
+      const batch = db.batch();
+      for (const report of openReports.docs.slice(start, start + 450)) {
+        batch.update(report.ref, { status: 'dismissed', reviewedAt: now });
+      }
+      await batch.commit();
     }
-    await batch.commit();
   }
 }
 

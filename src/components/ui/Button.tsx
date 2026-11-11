@@ -42,7 +42,7 @@ export function buttonStyles({
   className?: string;
 } = {}): string {
   return clsx(
-    'inline-flex select-none items-center justify-center gap-2 rounded-full font-semibold tracking-[-0.01em] transition-all duration-200 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-45',
+    'inline-flex select-none items-center justify-center gap-2 rounded-full font-semibold tracking-[-0.01em] transition duration-200 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-45',
     VARIANTS[variant],
     SIZES[size],
     className,
