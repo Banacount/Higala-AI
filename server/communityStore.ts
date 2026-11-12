@@ -294,18 +294,15 @@ function decodeCursor(
   }
 }
 
-async function assertPostReadableForReplies(
+function assertPostDataReadableForReplies(
+  data: CommunityPostDoc | undefined,
   uid: string,
-  postId: string,
   isAdmin: boolean,
-): Promise<void> {
-  const db = getCommunityFirestore();
-  const snapshot = await db.collection(POSTS).doc(postId).get();
-  if (!snapshot.exists) {
+): void {
+  if (!data) {
     throw new CommunityNotFoundError();
   }
 
-  const data = snapshot.data() as CommunityPostDoc;
   const status = readStatus(data.status);
   if (status === 'deleted') {
     throw new CommunityNotFoundError();
@@ -313,6 +310,30 @@ async function assertPostReadableForReplies(
   if (status === 'hidden' && !isAdmin && data.authorId !== uid) {
     // Do not reveal hidden content to non-owners.
     throw new CommunityNotFoundError();
+  }
+}
+
+async function assertPostReadableForReplies(
+  uid: string,
+  postId: string,
+  isAdmin: boolean,
+): Promise<void> {
+  const db = getCommunityFirestore();
+  const snapshot = await db.collection(POSTS).doc(postId).get();
+  assertPostDataReadableForReplies(
+    snapshot.exists ? (snapshot.data() as CommunityPostDoc) : undefined,
+    uid,
+    isAdmin,
+  );
+}
+
+function assertMemberNotDeleting(member: Record<string, unknown>): void {
+  if (member.deletionState === 'deleting') {
+    throw new CommunityError(
+      'Your community data is being deleted, so new content cannot be created right now.',
+      409,
+      'account_deleting',
+    );
   }
 }
 
@@ -326,14 +347,7 @@ async function assertMemberCanParticipate(
       'guidelines_required',
     );
   }
-  if (member.deletionState === 'deleting') {
-    throw new CommunityError(
-      'Your community data is being deleted, so new content cannot be created right now.',
-      409,
-      'account_deleting',
-    );
-  }
-  return Promise.resolve();
+  assertMemberNotDeleting(member);
 }
 
 async function enforceRateLimit(
@@ -747,6 +761,7 @@ export async function toggleReplyReaction(
   postId: string,
   replyId: string,
   emoji: ReplyEmoji,
+  isAdmin = false,
 ): Promise<{
   ok: boolean;
   reacted: boolean;
@@ -755,6 +770,8 @@ export async function toggleReplyReaction(
   myReactions: string[];
 }> {
   const db = getCommunityFirestore();
+  const memberRef = db.collection(MEMBERS).doc(uid);
+  const postRef = db.collection(POSTS).doc(postId);
   const replyRef = db.collection(REPLIES).doc(replyId);
   const reactionRef = db
     .collection(REPLY_REACTIONS)
@@ -764,6 +781,12 @@ export async function toggleReplyReaction(
   let nextReactionCounts: Record<string, number> = {};
 
   await db.runTransaction(async (transaction) => {
+    const memberSnapshot = await transaction.get(memberRef);
+    const member = memberSnapshot.data() ?? {};
+    // Reactions do not require guidelines acceptance, but they must respect
+    // the transactional account-deletion fence.
+    assertMemberNotDeleting(member);
+
     const replySnapshot = await transaction.get(replyRef);
     if (!replySnapshot.exists) {
       throw new CommunityNotFoundError('This reply does not exist.');
@@ -775,6 +798,13 @@ export async function toggleReplyReaction(
     if (readString(replyData.postId) !== postId) {
       throw new CommunityError('This reply does not belong to the specified post.');
     }
+
+    const postSnapshot = await transaction.get(postRef);
+    assertPostDataReadableForReplies(
+      postSnapshot.exists ? (postSnapshot.data() as CommunityPostDoc) : undefined,
+      uid,
+      isAdmin,
+    );
 
     const reactionSnapshot = await transaction.get(reactionRef);
     const currentCounts = readReplyReactionCounts(replyData.reactionCounts);
@@ -842,6 +872,7 @@ export async function toggleReaction(
   myReactions: CommunityReaction[];
 }> {
   const db = getCommunityFirestore();
+  const memberRef = db.collection(MEMBERS).doc(uid);
   const postRef = db.collection(POSTS).doc(postId);
   const reactionRef = db
     .collection(REACTIONS)
@@ -851,6 +882,12 @@ export async function toggleReaction(
   let nextReactionCounts: Record<CommunityReaction, number> = emptyReactionCounts();
 
   await db.runTransaction(async (transaction) => {
+    const memberSnapshot = await transaction.get(memberRef);
+    const member = memberSnapshot.data() ?? {};
+    // Reactions do not require guidelines acceptance, but they must respect
+    // the transactional account-deletion fence.
+    assertMemberNotDeleting(member);
+
     const postSnapshot = await transaction.get(postRef);
     if (!postSnapshot.exists) {
       throw new CommunityNotFoundError('This post does not exist.');

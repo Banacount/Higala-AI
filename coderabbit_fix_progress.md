@@ -53,3 +53,46 @@ Findings 1-8 + A (reply moderation queue) + B (concurrent deletion/reply creatio
 - Multi-document operations not globally atomic; `replyCount`/cleanup rely on transactional state changes + resumable markers but cannot be guaranteed under all failure/race combinations.
 - `moderateReply` cleanup marker clear is best-effort if doc missing; reaction cleanup is idempotent but not atomic with moderation state transition.
 - #B deletion fence/concurrency mitigated but not formally proven across all races/operations.
+
+## PR #7 Batch 1 - Reaction authorization + account-deletion fence
+
+Scope: CodeRabbit findings #1 and #3 only. **Implemented; compile/static verification only - not marked fully resolved** because Firestore transaction/concurrency behavior was not exercised against an emulator or integration test.
+
+Regression review: reactions originally required only authentication and post/reply visibility, not guidelines acceptance. The initial fence reused `assertMemberCanParticipate` and unintentionally required guidelines; this was corrected by using a deletion-only helper.
+
+### Finding #1 - `toggleReplyReaction` parent-post authorization
+- Extracted the existing `listReplies` parent-post visibility rule into shared `assertPostDataReadableForReplies`; both `assertPostReadableForReplies` (used by `listReplies`) and `toggleReplyReaction` now use the same rule.
+- `toggleReplyReaction` accepts optional `isAdmin`; `server/community.ts` passes `identity.isAdmin`, matching how `listReplies` is called.
+- Inside the reaction transaction, before any writes, the function now reads:
+  1. `communityMembers/{uid}`
+  2. `communityReplies/{replyId}`
+  3. `communityPosts/{postId}`
+  4. `communityReplyReactions/{replyId_uid_emoji}`
+- Rejects missing/deleted/hidden replies (existing behavior) and replies whose stored `postId` does not match the requested parent post.
+- Rejects missing/deleted parent posts, and hidden parent posts unless the caller is an admin or the post author - identical to `listReplies`. Hidden/deleted content is reported as not found.
+- Existing reaction toggle, limit, and count-update behavior is unchanged and runs only after authorization succeeds.
+
+### Finding #3 - account-deletion fence
+- `toggleReaction` and `toggleReplyReaction` now read the same `communityMembers/{uid}` document inside their Firestore transactions and call the shared `assertMemberNotDeleting` fence before any writes. Post and reply creation still use `assertMemberCanParticipate` (guidelines + deletion).
+- `deletionState === 'deleting'` is rejected with the existing 409 `account_deleting` error; no reaction document or reaction count is created, updated, or deleted.
+- Missing member documents are not recreated and do not block reactions, matching the original reaction behavior; a missing document has no active deletion fence.
+- Because the member read is part of the transaction, a concurrent deletion-fence write causes a Firestore conflict/retry rather than a silent commit.
+- Note: reactions remain available without guidelines acceptance, as in the original design. Only the account-deletion fence was added.
+
+### Files modified
+- `server/communityStore.ts`
+- `server/community.ts`
+- `coderabbit_fix_progress.md`
+
+### Verification
+- `npm run typecheck`: PASS
+- `git diff --check`: PASS
+- `npm run build`: PASS
+- Manual inspection: deletion-state check is inside both reaction transactions; all transaction reads precede writes; `toggleReplyReaction` checks parent-post authorization.
+- Automated tests: none available in the repository (no test framework present). Firestore emulator/runtime behavior was not executed.
+
+### Remaining limitations
+- Firestore transaction conflict/retry behavior was not exercised in an emulator or integration test.
+- This batch only fences the two reaction operations; other account-deletion races are not claimed to be solved.
+- The deletion fence only observes the member document while it exists. Once account cleanup has fully deleted that document, a reaction created afterward is not prevented by this check.
+- `toggleReaction` still only permits reactions on `visible` posts (unchanged); hidden-post admins/owners are not granted reaction access there.

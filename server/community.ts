@@ -208,6 +208,7 @@ export async function handleCommunity(
           input.postId,
           input.replyId,
           input.emoji,
+          identity.isAdmin,
         );
         return ok(result);
       }
