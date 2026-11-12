@@ -624,15 +624,10 @@ export async function listReplies(
 
   const decoded = decodeCursor(options?.cursor ?? null);
   if (decoded) {
-    const cursorDoc = await db.collection(REPLIES).doc(decoded.id).get();
-    if (
-      cursorDoc.exists &&
-      readString((cursorDoc.data() as CommunityReplyDoc).postId) === postId &&
-      readStatus((cursorDoc.data() as CommunityReplyDoc).status) === 'visible'
-    ) {
-      query = query.startAfter(cursorDoc);
-    }
-    // Unknown/foreign cursors are ignored to avoid leaking or throwing on stale pages.
+    // Resume from the cursor's stored values instead of re-reading the
+    // document, so pagination continues even if the cursor reply was deleted
+    // or no longer matches the visible filter.
+    query = query.startAfter(Timestamp.fromMillis(decoded.t), decoded.id);
   }
 
   const repliesSnapshot = await query.get();
@@ -1328,16 +1323,13 @@ export async function getModerationQueue(options?: {
 
       const decoded = decodeCursor(options?.repliesCursor ?? null);
       if (decoded) {
-        const cursorDoc = await db.collection(REPLIES).doc(decoded.id).get();
-        if (cursorDoc.exists) {
-          const cursorData = cursorDoc.data() as CommunityReplyDoc;
-          if (
-            cursorData.needsReview === true &&
-            readStatus(cursorData.status) !== 'deleted'
-          ) {
-            repliesQuery = repliesQuery.startAfter(cursorDoc);
-          }
-        }
+        // Resume from the cursor's stored values instead of re-reading the
+        // document. A cursor reply that was moderated or deleted still marks a
+        // stable position, so the next page cannot restart from the beginning.
+        repliesQuery = repliesQuery.startAfter(
+          Timestamp.fromMillis(decoded.t),
+          decoded.id,
+        );
       }
 
       return repliesQuery.get();
@@ -1905,8 +1897,11 @@ async function cleanupUserPostReactionsForAccountDeletion(
         });
       }
 
-      await doc.ref.delete().catch(() => {
-        // Missing reaction doc is already the desired state.
+      await doc.ref.delete().catch((error) => {
+        // A concurrent cleanup may have already removed the reaction, which is
+        // the desired end state. Any other failure must stop this cleanup
+        // attempt so the remaining reaction docs stay retryable.
+        if (!isFirestoreNotFoundError(error)) throw error;
       });
     }
   }
@@ -1987,8 +1982,11 @@ async function cleanupUserReplyReactionsForAccountDeletion(
         });
       }
 
-      await doc.ref.delete().catch(() => {
-        // Missing reply-reaction doc is already the desired state.
+      await doc.ref.delete().catch((error) => {
+        // A concurrent cleanup may have already removed the reply reaction,
+        // which is the desired end state. Any other failure must stop this
+        // cleanup attempt so the remaining docs stay retryable.
+        if (!isFirestoreNotFoundError(error)) throw error;
       });
     }
   }

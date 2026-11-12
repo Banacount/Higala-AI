@@ -1,30 +1,30 @@
-# CodeRabbit Fix Progress — Community Reply System (PR #6)
+# CodeRabbit Fix Progress ï¿½ Community Reply System (PR #6)
 
 ## Scope
 Findings 1-8 + A (reply moderation queue) + B (concurrent deletion/reply creation).
 
 ## Batch 1 (implemented, pending verification)
-- #1 Reply reads bypass parent-post authorization — **implemented**: `listReplies` enforces server-side parent-post existence/visibility before returning replies.
-- #2 Unbounded reply reads — **implemented**: Firestore `postId+status=='visible'` filter, ordered, limit/cursor pagination (`nextCursor`), API/client/hook/UI “Load more”.
+- #1 Reply reads bypass parent-post authorization ï¿½ **implemented**: `listReplies` enforces server-side parent-post existence/visibility before returning replies.
+- #2 Unbounded reply reads ï¿½ **implemented**: Firestore `postId+status=='visible'` filter, ordered, limit/cursor pagination (`nextCursor`), API/client/hook/UI ï¿½Load moreï¿½.
 
 ## Batch 2 (implemented + hardened, pending verification)
-- #3 Post deletion cleanup not retryable — **implemented**: resumable/idempotent `cleanupPostArtifacts`, `cleanupPending` marker, retry allowed while cleanup pending.
-- #4 Account deletion loses cleanup targets — **implemented**: fence + durable per-post targets in `communityMembers/{uid}/deletionPostTargets`, legacy array migration, bounded/paginated recording/processing, member cleared only on completion.
-- B Concurrent account erasure and reply creation — **partially mitigated**: `deletionState==='deleting'` checked in participation/rate-limit/create paths with fence lifecycle; not formally proven across all races/ops.
+- #3 Post deletion cleanup not retryable ï¿½ **implemented**: resumable/idempotent `cleanupPostArtifacts`, `cleanupPending` marker, retry allowed while cleanup pending.
+- #4 Account deletion loses cleanup targets ï¿½ **implemented**: fence + durable per-post targets in `communityMembers/{uid}/deletionPostTargets`, legacy array migration, bounded/paginated recording/processing, member cleared only on completion.
+- B Concurrent account erasure and reply creation ï¿½ **partially mitigated**: `deletionState==='deleting'` checked in participation/rate-limit/create paths with fence lifecycle; not formally proven across all races/ops.
 - Hardening: per-source `deletionCountAdjusted` markers make count adjustments recoverable and idempotent before source deletion.
 
 ## Batch 3 (implemented, pending verification)
-- #5 Explicit Community Guidelines acceptance — **implemented**: no auto-accept on “Post reply”; guidelines shown, explicit server-persisted acceptance action required, submission blocked until accepted then user retries post.
-- #6 StrictMode sessionStorage inconsistency — **implemented**: pure initializer, storage write moved to `useEffect` with safe try/catch.
-- #7 Stale reply loads overwrite successful mutations — **implemented**: mutations invalidate in-flight loads via requestId bump; append/dedupe and cursor handling preserved.
+- #5 Explicit Community Guidelines acceptance ï¿½ **implemented**: no auto-accept on ï¿½Post replyï¿½; guidelines shown, explicit server-persisted acceptance action required, submission blocked until accepted then user retries post.
+- #6 StrictMode sessionStorage inconsistency ï¿½ **implemented**: pure initializer, storage write moved to `useEffect` with safe try/catch.
+- #7 Stale reply loads overwrite successful mutations ï¿½ **implemented**: mutations invalidate in-flight loads via requestId bump; append/dedupe and cursor handling preserved.
 
 ## Batch 4A (implemented, pending deployment verification)
-- #8 Immutable caching of SPA fallback HTML — **implemented**: `vercel.json` rewrite narrowed to exclude `/assets/` and `/api/`; asset immutable caching preserved.
+- #8 Immutable caching of SPA fallback HTML ï¿½ **implemented**: `vercel.json` rewrite narrowed to exclude `/assets/` and `/api/`; asset immutable caching preserved.
 
 ## Batch 4B (implemented + hardened, pending behavioral verification; **not marked resolved**)
-- #A Reply moderation queue/actions — **implemented**:
+- #A Reply moderation queue/actions ï¿½ **implemented**:
   - **Queue pagination/ordering:** admin-only `GET moderation` accepts bounded `repliesCursor`/`repliesLimit` (validated). `getModerationQueue` queries `REPLIES where needsReview==true orderBy(createdAt desc, __name__ desc)` with `limit+1`, resumes only from a cursor doc that exists and still `needsReview` (non-deleted), filters defensively, returns `replies` page + `repliesNextCursor`. Added replies index `(needsReview, createdAt desc, __name__ desc)` in `firestore.indexes.json`. Posts/reports behavior preserved.
-  - **Pending reply client behavior:** create-reply response includes `pendingReview` (server-screened). Client/UI: pending replies are not added to public list and do not increment public reply count; user sees “submitted for review…” feedback (anonymous, no moderation internals). Publicly visible replies continue to be added and count incremented normally.
+  - **Pending reply client behavior:** create-reply response includes `pendingReview` (server-screened). Client/UI: pending replies are not added to public list and do not increment public reply count; user sees ï¿½submitted for reviewï¿½ï¿½ feedback (anonymous, no moderation internals). Publicly visible replies continue to be added and count incremented normally.
   - **Count consistency:** flagged replies created `hidden` with no `replyCount` increment. `moderateReply` (tx, admin/validated, reply-post binding): approve pending -> visible, clears needsReview, increments post `replyCount` once (requires visible parent post); reject pending -> deleted/cleared, no count change; hide visible -> hidden, decrements count once; dismiss-reports clears flag; deleted replies no-op. `deleteReply` (owner-only) decrements only if reply was publicly visible; idempotent resume allowed when `reactionCleanupPending`.
   - **Reaction cleanup retries:** moderation/delete paths that remove reactions set `reactionCleanupPending` in tx, run idempotent `deleteReplyReactionsForReply` after, then clear marker on success (best-effort if doc gone). Repeated moderation/delete on deleted replies with pending marker resumes cleanup without changing counts again.
   - **Public visibility/authz:** `listReplies` remains `status=='visible'` + parent readability checks + cursor bound to visible same-post reply; queue/actions remain server-side admin-only.
@@ -152,3 +152,52 @@ Scope: CodeRabbit findings #4-#9 only. Implemented; compile/static verification 
 - Deletion-marker writes outside a transaction can still race with physical deletion; this batch only converts completion writes to `update` as requested.
 - No index change was made. The query orders `__name__` ascending, which matches the default direction of Firestore's automatic `authorId` index, so no manual composite index is expected; this was not verified against a deployed instance.
 - The account-deletion reply pass still processes at most 50 replies per query page but re-queries after physical deletion, so it progresses without a cursor.
+
+## PR #7 Batch 2.5 - Firestore indexes, value cursors, and cleanup error propagation
+
+Scope: four additional CodeRabbit findings from the PR #7 review. Implemented; compile/static/JSON verification only - Firestore emulator and integration behavior were not executed.
+
+### Finding #1 - invalid single-field index definitions
+- Removed the five single-field entries from `firestore.indexes.json`:
+  - `communityReplies.authorId`
+  - `communityReactions.userId`
+  - `communityReplyReactions.userId`
+  - `communityReplyReactions.replyId`
+  - `communityReplyReactions.postId`
+- Firestore automatically indexes individual fields, so these entries were invalid as composite indexes and are not required by any query.
+- Preserved all 10 composite indexes, including the moderation reply queue index (`communityReplies`: `needsReview ASC`, `createdAt DESC`, `__name__ DESC`) and the feed indexes with `__name__` tie-breakers.
+
+### Finding #2 - value-based cursor pagination
+- `listReplies` no longer re-reads the cursor document. It decodes `{ t, id }` and applies `startAfter(Timestamp.fromMillis(t), id)` to its `createdAt ASC, __name__ ASC` query.
+- `getModerationQueue` uses the same value-based resume for its `needsReview == true`, `createdAt DESC, __name__ DESC` reply query.
+- Deleted or moderated cursor replies no longer reset pagination to page 1.
+- Malformed or missing cursors still decode to `null` and start from the beginning, matching `listPosts`; page-size bounds and authorization are unchanged.
+- `ensureAccountDeletionTargets` still uses its live `startAfter(lastDoc)` snapshot cursor because it orders by document ID only and never re-fetches or revalidates the cursor; it is not affected by the reported state-change issue.
+
+### Finding #3 - swallowed Firestore deletion errors
+- Replaced both empty `.catch(() => {})` handlers in `cleanupUserPostReactionsForAccountDeletion` and `cleanupUserReplyReactionsForAccountDeletion`.
+- Each now ignores only `isFirestoreNotFoundError(error)` (a concurrent cleanup already removed the document) and rethrows every other failure.
+- Failed deletions therefore abort the current cleanup attempt and leave the source document in place for a retry instead of silently looping over it.
+
+### Finding #4 - account-deletion cleanup loops
+- Verified the cleanup loops are bounded and make progress: each iteration processes at most 50-100 documents and removes the ones it completes; durable `deletionPostTargets` and `deletionCountAdjusted` markers are written before destructive work.
+- Unexpected errors now terminate the cleanup attempt; `deleteMyCommunityData` only deletes the member fence document after every step succeeds, so an interrupted run remains resumable.
+- Already-deleted documents remain safe: `delete()` on a missing document is a no-op, and not-found completion writes are explicitly tolerated.
+- No additional loop changes were required.
+
+### Files modified
+- `firestore.indexes.json`
+- `server/communityStore.ts`
+- `coderabbit_fix_progress.md`
+
+### Verification
+- `npm run typecheck`: PASS
+- `npm run build`: PASS
+- `git diff --check`: PASS
+- `firestore.indexes.json`: valid JSON with 10 composite indexes after removal.
+- Automated tests: none available in the repository (no test framework present). Firestore emulator/runtime behavior was not executed.
+
+### Remaining limitations
+- Pagination was verified statically only. The value cursors assume `createdAt` values use millisecond precision (`Timestamp.now()` / `Timestamp.fromMillis()`), which is how the application writes them; imported sub-millisecond timestamps were not tested.
+- Deletion-error propagation and account-deletion resume behavior were not exercised against the Firestore emulator.
+- The moderation reply-queue composite index still requires deployment before the production query can run.
