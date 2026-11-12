@@ -47,12 +47,18 @@ function RiskBadge({ post }: { post: CommunityModerationPost }) {
 }
 
 export function CommunityModerationPage() {
-  const { status: authStatus, getIdToken, isAdmin } = useAuth();
+  const {
+    status: authStatus,
+    getIdToken,
+    isAdmin,
+    refreshAdminAccess,
+  } = useAuth();
   const [queue, setQueue] = useState<CommunityModerationQueue | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [checkingAccess, setCheckingAccess] = useState(false);
 
   const load = useCallback(async () => {
     if (authStatus !== 'ready' || !isAdmin) {
@@ -88,6 +94,28 @@ export function CommunityModerationPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  const checkAccess = async () => {
+    setCheckingAccess(true);
+    setError(null);
+    setForbidden(false);
+    try {
+      const admin = await refreshAdminAccess();
+      if (!admin) {
+        setError(
+          'This account still does not have the admin custom claim. Ask a moderator to grant it, then check again.',
+        );
+      }
+    } catch (cause) {
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : 'Moderator access could not be refreshed.',
+      );
+    } finally {
+      setCheckingAccess(false);
+    }
+  };
 
   const act = async (
     postId: string,
@@ -141,9 +169,27 @@ export function CommunityModerationPage() {
               <code className="rounded bg-pine-100 px-1 py-0.5 text-[0.72rem] text-pine-800">
                 admin
               </code>{' '}
-              custom claim. If a moderator just granted you access, reload the
-              page.
+              custom claim. If a moderator just granted you access, check again
+              to refresh your session.
             </p>
+            <Button
+              className="mt-5"
+              variant="secondary"
+              onClick={() => void checkAccess()}
+              disabled={checkingAccess}
+            >
+              {checkingAccess ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+              ) : (
+                <RefreshCw className="h-4 w-4" aria-hidden="true" />
+              )}
+              {checkingAccess ? 'Checking access.' : 'Check access again'}
+            </Button>
+            {error ? (
+              <p className="mx-auto mt-4 max-w-md text-xs leading-relaxed text-clay">
+                {error}
+              </p>
+            ) : null}
           </div>
         ) : (
           <div className="space-y-6">
@@ -177,8 +223,27 @@ export function CommunityModerationPage() {
               </div>
             ) : forbidden ? (
               <div className="rounded-2xl border border-clay/20 bg-clay-soft/70 px-4 py-3 text-sm text-clay">
-                The server rejected moderator access for this session. Reload
-                after the admin claim is set.
+                <p>
+                  The server rejected moderator access for this session. If a
+                  moderator just granted you access, refresh your session.
+                </p>
+                <Button
+                  className="mt-3"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => void checkAccess()}
+                  disabled={checkingAccess}
+                >
+                  {checkingAccess ? (
+                    <Loader2
+                      className="h-3.5 w-3.5 animate-spin"
+                      aria-hidden="true"
+                    />
+                  ) : (
+                    <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+                  )}
+                  {checkingAccess ? 'Checking access.' : 'Check access again'}
+                </Button>
               </div>
             ) : queue ? (
               <>

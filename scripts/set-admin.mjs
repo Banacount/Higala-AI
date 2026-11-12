@@ -87,5 +87,5 @@ await auth.setCustomUserClaims(uid, claims);
 console.log(
   remove
     ? `Removed moderator access from ${uid}.`
-    : `Granted moderator access to ${uid}. Reload the app to pick up the new claim.`,
+    : `Granted moderator access to ${uid}. Reload the app or use "Check access again" on the moderation page to pick up the new claim.`,
 );
