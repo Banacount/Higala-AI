@@ -96,3 +96,59 @@ Regression review: reactions originally required only authentication and post/re
 - This batch only fences the two reaction operations; other account-deletion races are not claimed to be solved.
 - The deletion fence only observes the member document while it exists. Once account cleanup has fully deleted that document, a reaction created afterward is not prevented by this check.
 - `toggleReaction` still only permits reactions on `visible` posts (unchanged); hidden-post admins/owners are not granted reaction access there.
+
+## PR #7 Batch 2 - Community data integrity and deletion reliability
+
+Scope: CodeRabbit findings #4-#9 only. Implemented; compile/static verification only - Firestore transaction, emulator, and integration behavior were not executed.
+
+### Finding #4 - completion writes must not recreate deleted documents
+- Added `isFirestoreNotFoundError` to recognize only Firestore not-found failures (numeric code 5, string `not-found`, or explicit not-found messages).
+- `deleteReply`, `deletePost`, and `moderateReply` now finish reaction/cleanup markers with `update` instead of `set(..., { merge: true })` and ignore only not-found errors. Permission, network, and unexpected failures now propagate.
+- Account-deletion post-target completion also uses `update` with not-found-only handling, so a concurrently removed target is not recreated.
+- Account-deletion reply count adjustment now uses the transactional `update` on the reply that was read earlier in the same transaction.
+- Writes that legitimately create a document (post-deletion markers and target creation) were left unchanged.
+
+### Finding #5 - restoring hidden replies increments the parent count
+- `moderateReply` restore now distinguishes already-visible replies, pending/flagged replies, and hidden replies.
+- Any non-visible, non-deleted reply that becomes visible increments `replyCount` exactly once in the same transaction.
+- Repeated restores find the reply already visible and do not increment again.
+- Hidden restores require the parent post to exist and not be deleted; pending approvals keep the existing requirement that the parent post be visible.
+
+### Finding #6 - approving already-visible flagged replies
+- Restore on a visible reply now clears `needsReview` without changing `replyCount`.
+- Repeated approvals are no-ops once the flag is cleared.
+- Pending-to-visible approvals still increment exactly once.
+
+### Finding #7 - reply deletion and count adjustment are atomic
+- `deleteReply` decrements the parent count for every previously visible reply (including a visible reply with a stale moderation flag), then marks the reply deleted in the same transaction.
+- Account-deletion reply cleanup now re-reads the reply, parent post, and deletion target inside one transaction. It decrements only when the fresh reply is visible, the parent exists and is not deleted, and the parent is not itself an account-deletion target.
+- The same transaction marks the reply `deleted`/non-visible and sets the existing `deletionCountAdjusted` marker, so a failed physical delete cannot leave a public reply or double-decrement on retry.
+- Reply reaction cleanup markers are preserved; physical reply deletion is retried on the next run.
+
+### Finding #8 - post deletion keeps durable cleanup targets
+- `processAccountDeletionPostTargets` no longer swallows `recursiveDelete` failures. The error propagates and the durable target stays pending.
+- Targets are marked `post_deleted` and deleted only after artifact cleanup and physical/recursive post deletion succeed.
+- Missing posts and already-`post_deleted` targets remain resumable; a retry re-runs bounded, idempotent cleanup.
+- Target deletion errors are no longer swallowed, so an incomplete cleanup is retried instead of silently dropping the target.
+
+### Finding #9 - authored-post pagination advances deterministically
+- `ensureAccountDeletionTargets` now orders the author query by `FieldPath.documentId()` ascending and applies `startAfter(lastDoc)` on each subsequent page.
+- The existing 50-document page bound is preserved; empty and short pages still terminate the loop.
+- Document-ID ordering is stable and unique, so pages cannot repeat the same post or skip one.
+
+### Files modified
+- `server/communityStore.ts`
+- `coderabbit_fix_progress.md`
+
+### Verification
+- `npm run typecheck`: PASS
+- `npm run build`: PASS
+- `git diff --check`: PASS (only Git's LF/CRLF advisory warning for this file)
+- Manual inspection: Batch 1 reaction fence and parent-post authorization are unchanged; all new transactions complete reads before writes; reply listings filter `status == visible`.
+- Automated tests: none available in the repository (no test framework present). Firestore emulator/runtime behavior was not executed.
+
+### Remaining limitations
+- Transaction conflict/retry behavior and recursive deletion were not exercised against the Firestore emulator.
+- Deletion-marker writes outside a transaction can still race with physical deletion; this batch only converts completion writes to `update` as requested.
+- No index change was made. The query orders `__name__` ascending, which matches the default direction of Firestore's automatic `authorId` index, so no manual composite index is expected; this was not verified against a deployed instance.
+- The account-deletion reply pass still processes at most 50 replies per query page but re-queries after physical deletion, so it progresses without a cursor.

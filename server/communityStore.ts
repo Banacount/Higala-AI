@@ -350,6 +350,18 @@ async function assertMemberCanParticipate(
   assertMemberNotDeleting(member);
 }
 
+function isFirestoreNotFoundError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const { code, message } = error as { code?: unknown; message?: unknown };
+  if (code === 5 || code === '5' || code === 'not-found') return true;
+  if (typeof message !== 'string') return false;
+  return (
+    message.includes('NOT_FOUND') ||
+    message.includes('no entity to update') ||
+    message.includes('no document to update')
+  );
+}
+
 async function enforceRateLimit(
   db: Firestore,
   uid: string,
@@ -717,7 +729,7 @@ export async function deleteReply(uid: string, replyId: string): Promise<void> {
       const postRef = db.collection(POSTS).doc(postId);
       const postSnapshot = await transaction.get(postRef);
 
-      const wasPublic = status === 'visible' && data.needsReview !== true;
+      const wasPublic = status === 'visible';
 
       transaction.update(replyRef, {
         status: 'deleted',
@@ -742,16 +754,14 @@ export async function deleteReply(uid: string, replyId: string): Promise<void> {
   if (result.cleanup) {
     await deleteReplyReactionsForReply(db, replyId);
     await replyRef
-      .set(
-        {
-          reactionCleanupPending: false,
-          reactionCleanupCompletedAt: Timestamp.now(),
-          updatedAt: Timestamp.now(),
-        },
-        { merge: true },
-      )
-      .catch(() => {
-        // Reply may have been physically removed; cleanup is done.
+      .update({
+        reactionCleanupPending: false,
+        reactionCleanupCompletedAt: Timestamp.now(),
+        updatedAt: Timestamp.now(),
+      })
+      .catch((error) => {
+        // The reply may have been physically removed; its cleanup is complete.
+        if (!isFirestoreNotFoundError(error)) throw error;
       });
   }
 }
@@ -1168,12 +1178,15 @@ export async function deletePost(uid: string, postId: string): Promise<void> {
 
   // Mark cleanup complete only after artifact cleanup succeeds.
   await ref
-    .set(
-      { cleanupPending: false, cleanupCompletedAt: Timestamp.now(), updatedAt: Timestamp.now() },
-      { merge: true },
-    )
-    .catch(() => {
-      // Post may have been physically removed by another flow; cleanup is still done.
+    .update({
+      cleanupPending: false,
+      cleanupCompletedAt: Timestamp.now(),
+      updatedAt: Timestamp.now(),
+    })
+    .catch((error) => {
+      // The post may have been physically removed by another flow; cleanup is
+      // still done.
+      if (!isFirestoreNotFoundError(error)) throw error;
     });
 }
 
@@ -1413,7 +1426,19 @@ export async function moderateReply(
     }
 
     if (action === 'restore') {
-      if (needsReview && status !== 'visible') {
+      if (status === 'visible') {
+        // Already public: clear a lingering moderation flag without touching
+        // replyCount, because visibility did not change.
+        if (needsReview) {
+          transaction.update(replyRef, {
+            needsReview: false,
+            updatedAt: now,
+          });
+        }
+        return;
+      }
+
+      if (needsReview) {
         if (!postVisible) {
           throw new CommunityError(
             'This reply cannot be approved because its post is not available.',
@@ -1433,10 +1458,23 @@ export async function moderateReply(
         return;
       }
 
-      // No-op safe restore for non-pending replies (keeps existing semantics simple).
-      if (status === 'hidden' && !needsReview) {
-        transaction.update(replyRef, { status: 'visible', updatedAt: now });
+      // Restoring a hidden reply makes it public again, so it must add exactly
+      // one counted reply back to its parent post.
+      if (
+        !postExists ||
+        (postData !== null && readStatus(postData.status) === 'deleted')
+      ) {
+        throw new CommunityError(
+          'This reply cannot be restored because its post is not available.',
+          409,
+          'post_unavailable',
+        );
       }
+      transaction.update(replyRef, { status: 'visible', updatedAt: now });
+      transaction.update(postRef, {
+        replyCount: FieldValue.increment(1),
+        updatedAt: now,
+      });
       return;
     }
 
@@ -1484,16 +1522,14 @@ export async function moderateReply(
   if (shouldCleanupReactions) {
     await deleteReplyReactionsForReply(db, replyId);
     await replyRef
-      .set(
-        {
-          reactionCleanupPending: false,
-          reactionCleanupCompletedAt: Timestamp.now(),
-          updatedAt: Timestamp.now(),
-        },
-        { merge: true },
-      )
-      .catch(() => {
-        // Reply may have been physically removed; cleanup is done.
+      .update({
+        reactionCleanupPending: false,
+        reactionCleanupCompletedAt: Timestamp.now(),
+        updatedAt: Timestamp.now(),
+      })
+      .catch((error) => {
+        // The reply may have been physically removed; its cleanup is complete.
+        if (!isFirestoreNotFoundError(error)) throw error;
       });
   }
 }
@@ -1623,18 +1659,24 @@ async function ensureAccountDeletionTargets(
   }
 
   // Record durable per-post targets before any physical post deletion.
+  let lastDoc: QueryDocumentSnapshot | null = null;
   for (;;) {
-    const snapshot = await db
+    let query = db
       .collection(POSTS)
       .where('authorId', '==', uid)
-      .limit(50)
-      .get();
+      .orderBy(FieldPath.documentId(), 'asc')
+      .limit(50);
+    if (lastDoc) {
+      query = query.startAfter(lastDoc);
+    }
+    const snapshot = await query.get();
     if (snapshot.empty) break;
 
     for (const doc of snapshot.docs) {
       await markPostDeletionTarget(db, uid, doc.ref);
     }
 
+    lastDoc = snapshot.docs[snapshot.docs.length - 1];
     if (snapshot.size < 50) break;
   }
 
@@ -1676,34 +1718,33 @@ async function processAccountDeletionPostTargets(
 
         const postSnapshot = await postRef.get();
         if (postSnapshot.exists) {
-          await db.recursiveDelete(postRef).catch(() => {
-            // If already removed or partially removed, retry can resume safely.
-          });
+          // A recursive-delete failure must propagate so the durable target
+          // stays pending and a later run can resume cleanup.
+          await db.recursiveDelete(postRef);
           deletedPosts += 1;
         }
 
-        await targetDoc.ref.set(
-          {
+        // A completion marker must not recreate a target that another run has
+        // already removed.
+        await targetDoc.ref
+          .update({
             status: 'post_deleted',
             postDeletedAt: Timestamp.now(),
             updatedAt: Timestamp.now(),
-          },
-          { merge: true },
-        );
+          })
+          .catch((error) => {
+            if (!isFirestoreNotFoundError(error)) throw error;
+          });
       } else {
         // Resume-safe: ensure physical post removal completed.
         const postSnapshot = await postRef.get();
         if (postSnapshot.exists) {
-          await db.recursiveDelete(postRef).catch(() => {
-            // Retry can resume safely.
-          });
+          await db.recursiveDelete(postRef);
           deletedPosts += 1;
         }
       }
 
-      await targetDoc.ref.delete().catch(() => {
-        // Missing target doc is already the desired state.
-      });
+      await targetDoc.ref.delete();
     }
   }
 
@@ -1727,64 +1768,60 @@ async function cleanupUserRepliesForAccountDeletion(
     if (snapshot.empty) break;
 
     for (const doc of snapshot.docs) {
-      const data = doc.data() as CommunityReplyDoc;
+      await db.runTransaction(async (transaction) => {
+        const freshReply = await transaction.get(doc.ref);
+        if (!freshReply.exists) return;
+        const freshData = freshReply.data() as CommunityReplyDoc;
+        const alreadyAdjusted = freshData.deletionCountAdjusted === true;
+        const postId = readString(freshData.postId);
 
-      if (data.deletionCountAdjusted !== true) {
-        const postId = readString(data.postId);
+        let postRef: FirebaseFirestore.DocumentReference | null = null;
+        let postData: CommunityPostDoc | null = null;
         let shouldDecrement = false;
-        if (postId && readStatus(data.status) === 'visible') {
+
+        if (
+          !alreadyAdjusted &&
+          readStatus(freshData.status) === 'visible' &&
+          postId
+        ) {
+          postRef = db.collection(POSTS).doc(postId);
+          const targetRef = targetsRef.doc(postId);
           const [postSnapshot, targetSnapshot] = await Promise.all([
-            db.collection(POSTS).doc(postId).get(),
-            targetsRef.doc(postId).get(),
+            transaction.get(postRef),
+            transaction.get(targetRef),
           ]);
-          shouldDecrement =
-            !targetSnapshot.exists &&
-            postSnapshot.exists &&
-            readStatus((postSnapshot.data() as CommunityPostDoc).status) !==
-              'deleted';
+          if (postSnapshot.exists && !targetSnapshot.exists) {
+            postData = postSnapshot.data() as CommunityPostDoc;
+            shouldDecrement = readStatus(postData.status) !== 'deleted';
+          }
         }
 
-        await db.runTransaction(async (transaction) => {
-          const freshReply = await transaction.get(doc.ref);
-          if (!freshReply.exists) return;
-          const freshData = freshReply.data() as CommunityReplyDoc;
-          if (freshData.deletionCountAdjusted === true) return;
+        const now = Timestamp.now();
+        if (shouldDecrement && postRef && postData) {
+          const currentReplyCount = readNumber(postData.replyCount);
+          transaction.update(postRef, {
+            replyCount: Math.max(0, currentReplyCount - 1),
+            updatedAt: now,
+          });
+        }
 
-          if (shouldDecrement) {
-            const postIdForDec = readString(freshData.postId);
-            if (postIdForDec) {
-              const postRef = db.collection(POSTS).doc(postIdForDec);
-              const postSnapshot = await transaction.get(postRef);
-              if (postSnapshot.exists) {
-                const postData = postSnapshot.data() as CommunityPostDoc;
-                if (readStatus(postData.status) !== 'deleted') {
-                  const currentReplyCount = readNumber(postData.replyCount);
-                  transaction.update(postRef, {
-                    replyCount: Math.max(0, currentReplyCount - 1),
-                    updatedAt: Timestamp.now(),
-                  });
-                }
-              }
-            }
-          }
-
-          transaction.set(
-            doc.ref,
-            {
-              deletionCountAdjusted: true,
-              deletionCountAdjustedAt: Timestamp.now(),
-              updatedAt: Timestamp.now(),
-            },
-            { merge: true },
-          );
+        // Mark the reply non-visible in the same transaction as the count
+        // adjustment so a failed physical delete cannot leave it public.
+        transaction.update(doc.ref, {
+          status: 'deleted',
+          content: '',
+          needsReview: false,
+          reactionCounts: {},
+          reactionCleanupPending: true,
+          deletionCountAdjusted: true,
+          deletionCountAdjustedAt: freshData.deletionCountAdjustedAt ?? now,
+          updatedAt: now,
         });
-      }
+      });
 
       // Reply reactions are owned by this reply; remove before deleting reply.
       await deleteReplyReactionsForReply(db, doc.id);
-      await doc.ref.delete().catch(() => {
-        // Missing reply doc is already the desired state.
-      });
+      await doc.ref.delete();
       deletedReplies += 1;
     }
   }
