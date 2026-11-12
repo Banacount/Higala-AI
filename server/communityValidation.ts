@@ -127,6 +127,7 @@ export function parseCreateReply(body: unknown): CreateReplyInput {
   return { postId, content };
 }
 
+/** Parses and validates a request to toggle a post reaction. */
 export function parseToggleReaction(body: unknown): ToggleReactionInput {
   const record = asRecord(body);
   const postId = parsePostId(record.postId);
@@ -136,6 +137,7 @@ export function parseToggleReaction(body: unknown): ToggleReactionInput {
   return { postId, reaction: record.reaction };
 }
 
+/** Parses and validates a request to toggle a reply emoji reaction. */
 export function parseToggleReplyReaction(body: unknown): ToggleReplyReactionInput {
   const record = asRecord(body);
   const postId = parsePostId(record.postId);
@@ -160,6 +162,7 @@ export function parseReplyId(value: unknown, label = 'Reply'): string {
   return value;
 }
 
+/** Parses and validates a request to report a post. */
 export function parseReportPost(body: unknown): ReportPostInput {
   const record = asRecord(body);
   const postId = parsePostId(record.postId);
@@ -174,6 +177,7 @@ export function parseReportPost(body: unknown): ReportPostInput {
   return { postId, reason: record.reason, description };
 }
 
+/** Parses and validates a moderation action for a reply. */
 export function parseModerateReply(body: unknown): ModerateReplyInput {
   const record = asRecord(body);
   const postId = parsePostId(record.postId);
@@ -193,6 +197,7 @@ export function parseModeratePost(body: unknown): ModeratePostInput {
   return { postId, action: record.moderationAction };
 }
 
+/** Parses feed filters and caps the requested page size. */
 export function parseFeedQuery(params: URLSearchParams): {
   category: CommunityCategory | null;
   cursor: string | null;
@@ -228,6 +233,7 @@ export function parseFeedQuery(params: URLSearchParams): {
   return { category, cursor: cursor || null, limit };
 }
 
+/** Parses reply pagination options and caps the requested page size. */
 export function parseRepliesQuery(params: URLSearchParams): {
   cursor: string | null;
   limit: number;
@@ -250,6 +256,7 @@ export function parseRepliesQuery(params: URLSearchParams): {
   return { cursor: cursor || null, limit };
 }
 
+/** Parses moderation-queue pagination options for flagged replies. */
 export function parseModerationQueueQuery(params: URLSearchParams): {
   repliesCursor: string | null;
   repliesLimit: number;

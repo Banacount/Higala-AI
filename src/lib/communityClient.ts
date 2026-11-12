@@ -151,6 +151,7 @@ export function deleteReply(
   return communityPost({ action: 'delete-reply', replyId }, token);
 }
 
+/** Sends a post-reaction toggle request and returns the server's fresh state. */
 export function toggleReaction(
   input: {
     postId: string;
@@ -174,6 +175,7 @@ export function toggleReaction(
   );
 }
 
+/** Sends a reply-emoji toggle request and returns the server's fresh state. */
 export function toggleReplyReaction(
   input: {
     postId: string;
@@ -199,6 +201,7 @@ export function toggleReplyReaction(
   );
 }
 
+/** Fetches one page of replies, accepting the legacy array response shape. */
 export async function getCommunityReplies(
   postId: string,
   token: string,
@@ -240,12 +243,14 @@ export function reportPost(
   );
 }
 
+/** Records the current user's acceptance of the community guidelines. */
 export function acceptGuidelines(
   token: string,
 ): Promise<{ me: CommunityMe }> {
   return communityPost({ action: 'accept-guidelines' }, token);
 }
 
+/** Sends a moderation action for a reply. */
 export function moderateReply(
   input: { postId: string; replyId: string; action: CommunityModerationAction },
   token: string,
@@ -275,12 +280,14 @@ export function moderatePost(
   );
 }
 
+/** Requests erasure of the current user's community content. */
 export function deleteMyCommunityData(
   token: string,
 ): Promise<{ deletedPosts: number; deletedReports: number; deletedReplies?: number }> {
   return communityPost({ action: 'delete-my-data' }, token);
 }
 
+/** Fetches the moderator queue, optionally paging flagged replies by cursor. */
 export function getModerationQueue(
   token: string,
   options?: { repliesCursor?: string | null; repliesLimit?: number },

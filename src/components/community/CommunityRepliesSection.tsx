@@ -28,6 +28,7 @@ interface CommunityRepliesSectionProps {
   onReplyCountChange?: (delta: number) => void;
 }
 
+/** Renders the reply composer and list for one community post. */
 export function CommunityRepliesSection({
   postId,
   onReplyCountChange,
@@ -57,6 +58,7 @@ export function CommunityRepliesSection({
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
+  /** Publishes the composed reply, handling review and guidelines states. */
   const submitReply = async (tokenOverride?: string) => {
     const trimmed = content.trim();
     if (!trimmed || needsGuidelines) return;
@@ -92,6 +94,7 @@ export function CommunityRepliesSection({
         cause.code === 'guidelines_required'
       ) {
         setNeedsGuidelines(true);
+        setGuidelinesOpen(true);
         setSubmitError(
           'Please read and accept the community guidelines before posting your first reply.',
         );
@@ -112,6 +115,7 @@ export function CommunityRepliesSection({
     }
   };
 
+  /** Submits the reply form, reopening guidelines when acceptance is required. */
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
     if (needsGuidelines) {
@@ -124,6 +128,7 @@ export function CommunityRepliesSection({
     void submitReply();
   };
 
+  /** Records guideline acceptance without automatically submitting the reply. */
   const handleAcceptGuidelines = async () => {
     setAcceptingGuidelines(true);
     setSubmitError(null);
@@ -303,7 +308,7 @@ export function CommunityRepliesSection({
       </form>
 
       <CommunityGuidelinesModal
-        open={guidelinesOpen || needsGuidelines}
+        open={guidelinesOpen}
         onClose={() => setGuidelinesOpen(false)}
       />
 

@@ -18,6 +18,7 @@ interface ReplyEmojiReactionsProps {
   ) => void;
 }
 
+/** Renders emoji reactions and an add-reaction picker for one reply. */
 export function ReplyEmojiReactions({
   postId,
   replyId,
@@ -35,6 +36,7 @@ export function ReplyEmojiReactions({
   useEffect(() => {
     if (!pickerOpen) return;
 
+    /** Closes the picker when a pointer lands outside it. */
     function handlePointerDown(event: PointerEvent) {
       if (
         pickerRef.current &&
@@ -48,6 +50,7 @@ export function ReplyEmojiReactions({
     return () => window.removeEventListener('pointerdown', handlePointerDown);
   }, [pickerOpen]);
 
+  /** Optimistically toggles an emoji reaction, rolling back if the request fails. */
   const handleToggle = async (emoji: ReplyEmoji) => {
     if (pendingEmoji) return; // Prevent duplicate requests while one is pending
 

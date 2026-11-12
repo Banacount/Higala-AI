@@ -201,3 +201,71 @@ Scope: four additional CodeRabbit findings from the PR #7 review. Implemented; c
 - Pagination was verified statically only. The value cursors assume `createdAt` values use millisecond precision (`Timestamp.now()` / `Timestamp.fromMillis()`), which is how the application writes them; imported sub-millisecond timestamps were not tested.
 - Deletion-error propagation and account-deletion resume behavior were not exercised against the Firestore emulator.
 - The moderation reply-queue composite index still requires deployment before the production query can run.
+
+## PR #7 Batch 3 - Stale async state, guidelines modal, and docstring coverage
+
+Scope: CodeRabbit findings #10, #11, #12, and #2, plus the reported "Docstring Coverage" CI failure. Implemented; compile/static verification only - browser/runtime behavior was not executed.
+
+### Finding #10 - local reply mutations discarded valid in-flight loads
+- `useCommunityReplies` now tracks append requests separately from replacement (initial/refresh) loads:
+  - `appendRequestId` invalidates only append responses.
+  - `mutationVersion`, `localAdds`, and `localRemovals` record local creates/deletes.
+- `addReply`/`removeReply` call `invalidatePendingAppends()` instead of invalidating every in-flight request, so a concurrent refresh still applies.
+- A replacement response reconciles mutations that happened while it was in flight: replies deleted after the load started stay removed, and locally created replies added after it started are re-applied.
+- Initial loads, explicit refreshes, pagination cursors, and append de-duplication are unchanged.
+- Stale-response protection remains: only the newest request of each kind may update state.
+
+### Finding #11 - moderation reply append could overwrite a refresh
+- `CommunityModerationPage` now uses `loadGeneration` and `appendRequestId` refs.
+- `load()` (initial/refresh) increments `loadGeneration`, invalidates any in-flight append, and resets `loadingMoreReplies`.
+- `loadMoreReplies()` captures both the current generation and its own append id; success, error, and `finally` paths return without writing state when either has changed.
+- Only the current-generation append response may merge replies or advance `repliesNextCursor`; older appends can no longer append stale pages or clear the loading indicator for a newer request.
+- No structural refactor of the page's existing actions or rendering was made.
+
+### Finding #12 - post reactions could be applied after navigating to another post
+- `CommunityPostPage`'s `onReactionChange` handler now guards the parent state update with `if (!prev || prev.id !== post.id) return prev;`.
+- The callback closes over the render-time post id, so a delayed response for post A is ignored after the route has moved to post B.
+- The optimistic update and rollback behavior inside `SupportiveReactions` is unchanged.
+
+### Finding #2 - guidelines modal could not be closed before acceptance
+- `CommunityRepliesSection` now drives modal visibility only through `guidelinesOpen`.
+- A `guidelines_required` submission error sets both `needsGuidelines` and `guidelinesOpen`, so the modal opens when acceptance is actually required.
+- `needsGuidelines` remains the submission gate and still controls the acceptance UI; closing the modal no longer re-opens it immediately.
+- Read -> close -> accept works, and accepting guidelines does not auto-submit the reply (the user still submits manually).
+
+### Docstring coverage investigation
+- Searched the repository, Git history, and branch history for `.github/`, workflow YAML, `.coderabbit.yaml`, `interrogate`, `pydocstyle`, or a coverage/docstring script. None exist; `package.json` has no test, lint, or docstring script.
+- Confirmed CodeRabbit's "Docstring Coverage" is its built-in pre-merge check (default 80% threshold), not a job in this repository. No local CI command reproduces it.
+- Exact external percentage could not be retrieved: the GitHub API returns 404 for the repository/PR without authentication, `gh` is not authenticated, and `git ls-remote` exposes no PR refs.
+- Added concise TSDoc/JSDoc to the named functions touched by this PR in the server store, validation, handler, shared helper, client API, reply hook, components, and pages.
+- Approximate local audit (regex/brace-based, functions whose range intersects the PR diff, not CodeRabbit's exact algorithm):
+  - Before documentation: 0 of 61 touched named functions documented = 0.00%.
+  - After documentation (working tree): 64 of 64 = 100.00%.
+- The audit script lives outside the repository at `%TEMP%\opencode\doc-coverage.cjs`; no threshold or check was changed or disabled.
+
+### Files modified
+- `src/hooks/useCommunityReplies.ts`
+- `src/pages/CommunityModerationPage.tsx`
+- `src/pages/CommunityPostPage.tsx`
+- `src/components/community/CommunityRepliesSection.tsx`
+- `src/components/community/ReplyEmojiReactions.tsx`
+- `src/components/community/SupportiveReactions.tsx`
+- `src/components/home/QuickTools.tsx`
+- `src/lib/communityClient.ts`
+- `src/shared/community.ts`
+- `server/community.ts`
+- `server/communityStore.ts`
+- `server/communityValidation.ts`
+- `coderabbit_fix_progress.md`
+
+### Verification
+- `npm run typecheck`: PASS
+- `npm run build`: PASS (2395 modules, Vite 3.60s)
+- `git diff --check`: PASS (exit 0)
+- Approximate docstring coverage audit: 100.00% after (64/64); 0.00% before (0/61).
+- No test framework or test script exists; Firestore emulator and browser runtime behavior were not executed.
+
+### Remaining limitations
+- The exact CodeRabbit docstring percentage can only be confirmed by re-running the external check; the local audit is approximate and excludes anonymous closures.
+- Async race fixes were verified by static inspection only. Real-network ordering (slow refresh vs. append vs. mutation) was not exercised in a browser or with the Firestore emulator.
+- `useCommunityReplies` reconciliation assumes reply ids are unique and stable; it does not attempt to reconcile server-side moderation changes that occur without a client mutation.

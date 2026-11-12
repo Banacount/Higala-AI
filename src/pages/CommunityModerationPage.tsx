@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -48,6 +48,7 @@ function RiskBadge({ post }: { post: CommunityModerationPost }) {
   return null;
 }
 
+/** Renders the moderator queue and its moderation actions. */
 export function CommunityModerationPage() {
   const { status: authStatus, getIdToken, isAdmin } = useAuth();
   const [queue, setQueue] = useState<CommunityModerationQueue | null>(null);
@@ -56,8 +57,17 @@ export function CommunityModerationPage() {
   const [error, setError] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const loadGeneration = useRef(0);
+  const appendRequestId = useRef(0);
 
+  /** Loads a fresh moderation queue and supersedes any in-flight append. */
   const load = useCallback(async () => {
+    const generation = loadGeneration.current + 1;
+    loadGeneration.current = generation;
+    // A replacement load supersedes any append that is still in flight.
+    appendRequestId.current += 1;
+    setLoadingMoreReplies(false);
+
     if (authStatus !== 'ready' || !isAdmin) {
       setLoading(false);
       return;
@@ -68,9 +78,11 @@ export function CommunityModerationPage() {
     try {
       const token = await getIdToken();
       const result = await getModerationQueue(token);
+      if (loadGeneration.current !== generation) return;
       setQueue(result);
       setForbidden(false);
     } catch (cause) {
+      if (loadGeneration.current !== generation) return;
       if (
         cause instanceof CommunityApiError &&
         (cause.status === 403 || cause.status === 401)
@@ -84,10 +96,13 @@ export function CommunityModerationPage() {
         );
       }
     } finally {
-      setLoading(false);
+      if (loadGeneration.current === generation) {
+        setLoading(false);
+      }
     }
   }, [authStatus, getIdToken, isAdmin]);
 
+  /** Appends the next flagged-reply page only while its load generation is current. */
   const loadMoreReplies = useCallback(async () => {
     if (
       authStatus !== 'ready' ||
@@ -100,11 +115,20 @@ export function CommunityModerationPage() {
 
     setLoadingMoreReplies(true);
     setError(null);
+    const generation = loadGeneration.current;
+    const currentAppend = appendRequestId.current + 1;
+    appendRequestId.current = currentAppend;
     try {
       const token = await getIdToken();
       const result = await getModerationQueue(token, {
         repliesCursor: queue.repliesNextCursor,
       });
+      if (
+        loadGeneration.current !== generation ||
+        appendRequestId.current !== currentAppend
+      ) {
+        return;
+      }
       setQueue((prev) =>
         prev
           ? {
@@ -121,6 +145,12 @@ export function CommunityModerationPage() {
       );
     } catch (cause) {
       if (
+        loadGeneration.current !== generation ||
+        appendRequestId.current !== currentAppend
+      ) {
+        return;
+      }
+      if (
         cause instanceof CommunityApiError &&
         (cause.status === 403 || cause.status === 401)
       ) {
@@ -133,7 +163,12 @@ export function CommunityModerationPage() {
         );
       }
     } finally {
-      setLoadingMoreReplies(false);
+      if (
+        loadGeneration.current === generation &&
+        appendRequestId.current === currentAppend
+      ) {
+        setLoadingMoreReplies(false);
+      }
     }
   }, [authStatus, getIdToken, isAdmin, loadingMoreReplies, queue]);
 

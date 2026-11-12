@@ -33,6 +33,7 @@ const REACTION_ICONS: Record<CommunityReaction, React.ComponentType<{ className?
   'thank-you': Sparkles,
 };
 
+/** Renders the supportive-reaction controls for a community post. */
 export function SupportiveReactions({
   postId,
   counts,
@@ -43,6 +44,7 @@ export function SupportiveReactions({
   const [pendingReaction, setPendingReaction] = useState<CommunityReaction | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  /** Optimistically toggles a reaction, rolling back if the request fails. */
   const handleToggle = async (reaction: CommunityReaction) => {
     if (pendingReaction) return; // Prevent duplicate requests while one is pending
 

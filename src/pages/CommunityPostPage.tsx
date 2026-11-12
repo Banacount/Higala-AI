@@ -30,6 +30,7 @@ interface PostLocationState {
   supportSuggested?: boolean;
 }
 
+/** Renders one community post with its reactions, actions, and replies. */
 export function CommunityPostPage() {
   const { postId } = useParams<{ postId: string }>();
   const location = useLocation();
@@ -180,15 +181,15 @@ export function CommunityPostPage() {
                     counts={post.reactionCounts}
                     myReactions={post.myReactions ?? []}
                     onReactionChange={(nextCounts, nextMyReactions) => {
-                      setPost((prev) =>
-                        prev
-                          ? {
-                              ...prev,
-                              reactionCounts: nextCounts,
-                              myReactions: nextMyReactions,
-                            }
-                          : prev,
-                      );
+                      setPost((prev) => {
+                        // Ignore responses for a post the user has navigated away from.
+                        if (!prev || prev.id !== post.id) return prev;
+                        return {
+                          ...prev,
+                          reactionCounts: nextCounts,
+                          myReactions: nextMyReactions,
+                        };
+                      });
                     }}
                   />
                 </div>

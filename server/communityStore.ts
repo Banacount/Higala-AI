@@ -154,6 +154,7 @@ function readReactionCounts(
   return counts;
 }
 
+/** Normalizes stored reply reaction counts to known emoji IDs, omitting zeroes. */
 function readReplyReactionCounts(
   value: unknown,
 ): Record<string, number> {
@@ -177,6 +178,7 @@ function readStatus(value: unknown): CommunityPostStatus {
   return value === 'hidden' || value === 'deleted' ? value : 'visible';
 }
 
+/** Maps a stored post document to the shape exposed to community clients. */
 function toPublicPost(
   id: string,
   data: CommunityPostDoc,
@@ -197,6 +199,7 @@ function toPublicPost(
   };
 }
 
+/** Maps a stored reply document to the shape exposed to community clients. */
 function toPublicReply(
   id: string,
   data: CommunityReplyDoc,
@@ -214,6 +217,7 @@ function toPublicReply(
   };
 }
 
+/** Maps a stored post document to the moderator-facing shape, including risk state. */
 function toModerationPost(
   id: string,
   data: CommunityPostDoc,
@@ -231,6 +235,7 @@ function toModerationPost(
   };
 }
 
+/** Maps a stored reply document to the moderator-facing shape, including risk state. */
 function toModerationReply(
   id: string,
   data: CommunityReplyDoc,
@@ -272,6 +277,7 @@ function encodeCursor(createdAt: number, id: string): string {
   );
 }
 
+/** Decodes an opaque pagination cursor, returning null when malformed. */
 function decodeCursor(
   cursor: string | null,
 ): { t: number; id: string } | null {
@@ -294,6 +300,7 @@ function decodeCursor(
   }
 }
 
+/** Rejects missing, deleted, or moderator-hidden posts for reply reads. */
 function assertPostDataReadableForReplies(
   data: CommunityPostDoc | undefined,
   uid: string,
@@ -313,6 +320,7 @@ function assertPostDataReadableForReplies(
   }
 }
 
+/** Loads a post and enforces the reply-read visibility rules. */
 async function assertPostReadableForReplies(
   uid: string,
   postId: string,
@@ -327,6 +335,7 @@ async function assertPostReadableForReplies(
   );
 }
 
+/** Blocks new participation while an account-deletion fence is active. */
 function assertMemberNotDeleting(member: Record<string, unknown>): void {
   if (member.deletionState === 'deleting') {
     throw new CommunityError(
@@ -337,6 +346,7 @@ function assertMemberNotDeleting(member: Record<string, unknown>): void {
   }
 }
 
+/** Requires accepted guidelines and an inactive account-deletion fence. */
 async function assertMemberCanParticipate(
   member: Record<string, unknown>,
 ): Promise<void> {
@@ -350,6 +360,7 @@ async function assertMemberCanParticipate(
   assertMemberNotDeleting(member);
 }
 
+/** Detects Firestore not-found failures across the error shapes the Admin SDK emits. */
 function isFirestoreNotFoundError(error: unknown): boolean {
   if (!error || typeof error !== 'object') return false;
   const { code, message } = error as { code?: unknown; message?: unknown };
@@ -362,6 +373,7 @@ function isFirestoreNotFoundError(error: unknown): boolean {
   );
 }
 
+/** Applies the per-user post/report sliding-window limit in a transaction. */
 async function enforceRateLimit(
   db: Firestore,
   uid: string,
@@ -604,6 +616,7 @@ export async function createReply(
   };
 }
 
+/** Lists visible replies for a readable post using a value-based cursor. */
 export async function listReplies(
   uid: string,
   postId: string,
@@ -680,6 +693,7 @@ export async function listReplies(
   };
 }
 
+/** Deletes every stored reaction for one reply in bounded batches. */
 async function deleteReplyReactionsForReply(
   db: Firestore,
   replyId: string,
@@ -700,6 +714,7 @@ async function deleteReplyReactionsForReply(
   }
 }
 
+/** Soft-deletes an owned reply, adjusts the parent count, then cleans up reactions. */
 export async function deleteReply(uid: string, replyId: string): Promise<void> {
   const db = getCommunityFirestore();
   const replyRef = db.collection(REPLIES).doc(replyId);
@@ -761,6 +776,7 @@ export async function deleteReply(uid: string, replyId: string): Promise<void> {
   }
 }
 
+/** Toggles one emoji reaction on a visible reply and returns fresh counts. */
 export async function toggleReplyReaction(
   uid: string,
   postId: string,
@@ -865,6 +881,7 @@ export async function toggleReplyReaction(
   };
 }
 
+/** Toggles one supportive reaction on a visible post and returns fresh counts. */
 export async function toggleReaction(
   uid: string,
   postId: string,
@@ -1000,6 +1017,7 @@ export async function listPosts(
   };
 }
 
+/** Returns a post visible to the caller together with their current reactions. */
 export async function getPost(
   uid: string,
   postId: string,
@@ -1034,6 +1052,7 @@ export async function getPost(
   return toPublicPost(snapshot.id, data, uid, myReactions);
 }
 
+/** Dismisses open reports for the given posts in bounded write batches. */
 async function dismissOpenReportsForPosts(
   db: Firestore,
   postIds: string[],
@@ -1061,6 +1080,7 @@ async function dismissOpenReportsForPosts(
   }
 }
 
+/** Dismisses open reports and removes replies and reactions for a deleted post. */
 async function cleanupPostArtifacts(
   db: Firestore,
   postId: string,
@@ -1074,6 +1094,7 @@ async function cleanupPostArtifacts(
   await deleteReplyReactionsForPost(db, postId);
 }
 
+/** Deletes every reply for a post in bounded batches. */
 async function deleteRepliesForPost(
   db: Firestore,
   postId: string,
@@ -1094,6 +1115,7 @@ async function deleteRepliesForPost(
   }
 }
 
+/** Deletes post reactions for a post in bounded batches. */
 async function deleteReactionsForPost(
   db: Firestore,
   postId: string,
@@ -1114,6 +1136,7 @@ async function deleteReactionsForPost(
   }
 }
 
+/** Deletes reply reactions for a post in bounded batches. */
 async function deleteReplyReactionsForPost(
   db: Firestore,
   postId: string,
@@ -1134,6 +1157,7 @@ async function deleteReplyReactionsForPost(
   }
 }
 
+/** Soft-deletes an owned post, cleans up artifacts, then records completion. */
 export async function deletePost(uid: string, postId: string): Promise<void> {
   const db = getCommunityFirestore();
   const ref = db.collection(POSTS).doc(postId);
@@ -1241,6 +1265,7 @@ export async function reportPost(
   });
 }
 
+/** Applies a moderation action to a post and reconciles its reports. */
 export async function moderatePost(
   postId: string,
   action: 'hide' | 'restore' | 'dismiss-reports',
@@ -1287,6 +1312,7 @@ export async function moderatePost(
   });
 }
 
+/** Builds the moderator queue with a cursor-paginated flagged-reply page. */
 export async function getModerationQueue(options?: {
   repliesCursor?: string | null;
   repliesLimit?: number;
@@ -1337,6 +1363,7 @@ export async function getModerationQueue(options?: {
   ]);
 
   const posts = new Map<string, CommunityModerationPost>();
+  /** Adds a post to the de-duplicated moderation result set. */
   const addPost = (doc: QueryDocumentSnapshot | DocumentSnapshot) => {
     if (!posts.has(doc.id)) {
       posts.set(
@@ -1377,6 +1404,7 @@ export async function getModerationQueue(options?: {
   };
 }
 
+/** Applies a moderation action to a reply and reconciles reply counts. */
 export async function moderateReply(
   postId: string,
   replyId: string,
@@ -1526,6 +1554,7 @@ export async function moderateReply(
   }
 }
 
+/** Marks a post for deletion and records a durable account-deletion target. */
 async function markPostDeletionTarget(
   db: Firestore,
   uid: string,
@@ -1582,6 +1611,7 @@ async function markPostDeletionTarget(
   }
 }
 
+/** Migrates legacy targets and records durable post targets before erasure. */
 async function ensureAccountDeletionTargets(
   db: Firestore,
   uid: string,
@@ -1682,6 +1712,7 @@ async function ensureAccountDeletionTargets(
   );
 }
 
+/** Processes durable post targets in bounded passes and removes each when complete. */
 async function processAccountDeletionPostTargets(
   db: Firestore,
   uid: string,
@@ -1743,6 +1774,7 @@ async function processAccountDeletionPostTargets(
   return deletedPosts;
 }
 
+/** Deletes a user's replies and reconciles parent reply counts idempotently. */
 async function cleanupUserRepliesForAccountDeletion(
   db: Firestore,
   uid: string,
@@ -1821,6 +1853,7 @@ async function cleanupUserRepliesForAccountDeletion(
   return deletedReplies;
 }
 
+/** Deletes a user's post reactions and reconciles post counts idempotently. */
 async function cleanupUserPostReactionsForAccountDeletion(
   db: Firestore,
   uid: string,
@@ -1907,6 +1940,7 @@ async function cleanupUserPostReactionsForAccountDeletion(
   }
 }
 
+/** Deletes a user's reply reactions and reconciles reply counts idempotently. */
 async function cleanupUserReplyReactionsForAccountDeletion(
   db: Firestore,
   uid: string,
@@ -1992,6 +2026,7 @@ async function cleanupUserReplyReactionsForAccountDeletion(
   }
 }
 
+/** Erases a user's community content behind a resumable deletion fence. */
 export async function deleteMyCommunityData(uid: string): Promise<{
   deletedPosts: number;
   deletedReports: number;

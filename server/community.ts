@@ -72,6 +72,7 @@ function asBodyRecord(value: unknown): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
+/** Routes a validated community request to the matching store operation. */
 export async function handleCommunity(
   req: CommunityRequest,
 ): Promise<CommunityResponse> {

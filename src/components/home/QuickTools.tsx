@@ -12,6 +12,7 @@ const FEATURED_TOOL_IDS = TOOL_IDS.filter(
 
 const LAST_TOOL_KEY = 'higala.home.featured-tool';
 
+/** Picks a featured tool, avoiding the one shown in the previous session. */
 function pickRandomTool(): FeaturedToolId {
   let previous: string | null = null;
   try {
@@ -25,6 +26,7 @@ function pickRandomTool(): FeaturedToolId {
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
+/** Shows one rotating featured tool on the home page. */
 export function QuickTools() {
   const [toolId] = useState<FeaturedToolId>(pickRandomTool);
 

@@ -132,6 +132,7 @@ export const REPLY_EMOJIS: ReplyEmojiOption[] = [
   { emoji: '💪', label: 'Encouragement' },
 ];
 
+/** Narrows an unknown value to a supported reply emoji. */
 export function isReplyEmoji(value: unknown): value is ReplyEmoji {
   return typeof value === 'string' && REPLY_EMOJI_IDS.includes(value as ReplyEmoji);
 }
