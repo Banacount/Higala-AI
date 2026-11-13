@@ -1,0 +1,14 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Community data is server-only. The browser never reads or writes
+    // Firestore directly; every request goes through /api/community where the
+    // Firebase Admin SDK derives the UID from a verified ID token and returns
+    // sanitized DTOs. Deny-all keeps private author/reporter identifiers out
+    // of reach even if someone crafts their own client.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

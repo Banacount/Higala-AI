@@ -1,0 +1,48 @@
+{
+  "name": "higala-ai",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Higala-AI — a dialect-aware, radically candid mental health companion for Kagay-anons.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "build:functions": "node scripts/build-functions.mjs",
+    "build:all": "npm run build && npm run build:functions",
+    "deploy": "npm run build:all && firebase deploy",
+    "deploy:rules": "firebase deploy --only firestore:rules,firestore:indexes",
+    "emulators": "firebase emulators:start --only auth,firestore",
+    "set-admin": "node --env-file=.env scripts/set-admin.mjs"
+  },
+  "dependencies": {
+    "@google/genai": "^3.0.0",
+    "clsx": "^2.1.1",
+    "firebase": "^13.2.0",
+    "firebase-admin": "^14.5.0",
+    "lucide-react": "^1.70.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "react-markdown": "^10.1.0",
+    "react-router-dom": "^7.18.5",
+    "remark-gfm": "^4.0.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.5",
+    "@types/node": "^26.6.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.2.1",
+    "esbuild": "^0.28.2",
+    "firebase-functions": "^7.4.0",
+    "tailwindcss": "^4.3.5",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.6"
+  },
+  "overrides": {
+    "jwks-rsa": {
+      "jose": "5.10.0"
+    }
+  }
+}
