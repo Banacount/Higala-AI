@@ -20,13 +20,13 @@ import {
   type ToolId,
 } from '../src/shared/types.ts';
 
-const DEFAULT_MODEL = 'gemini-3.5-flash';
-const FALLBACK_MODEL = 'gemini-3.5-flash-lite';
+export const DEFAULT_MODEL = 'gemini-3.5-flash';
+export const FALLBACK_MODEL = 'gemini-3.5-flash-lite';
 const MAX_ATTEMPTS_PER_MODEL = 2;
 const RETRY_DELAY_MS = 700;
 const MAX_MESSAGES = 20;
-const MAX_MESSAGE_CHARS = 4_000;
-const MAX_TOTAL_CHARS = 24_000;
+export const MAX_MESSAGE_CHARS = 4_000;
+export const MAX_TOTAL_CHARS = 24_000;
 const MAX_OUTPUT_TOKENS = 900;
 
 export class ChatValidationError extends Error {

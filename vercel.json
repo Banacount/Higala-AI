@@ -4,6 +4,9 @@
     "api/chat.ts": {
       "maxDuration": 60
     },
+    "api/voice-chat.ts": {
+      "maxDuration": 60
+    },
     "api/community.ts": {
       "maxDuration": 30
     }

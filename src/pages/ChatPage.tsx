@@ -25,6 +25,7 @@ export function ChatPage() {
     riskLevel,
     demoMode,
     send,
+    sendVoice,
     reset,
     dismissError,
   } = useChat();
@@ -173,8 +174,7 @@ export function ChatPage() {
                   aria-hidden="true"
                 />
                 <p className="text-[0.68rem] leading-relaxed text-[#72511a]">
-                  Live AI was unavailable, so Higala used an offline response.
-                  Your conversation is still saved on this device.
+                  {error}
                 </p>
               </div>
               <button
@@ -196,6 +196,9 @@ export function ChatPage() {
             draft={draft}
             onDraftChange={setDraft}
             onSend={submit}
+            onSendVoice={(blob, durationMs) => {
+              void sendVoice(blob, durationMs);
+            }}
             loading={loading}
           />
           <p className="mt-1.5 text-center text-[0.58rem] leading-relaxed text-muted/55">

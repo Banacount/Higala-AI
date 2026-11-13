@@ -37,8 +37,8 @@ The original brief describes a tool that is not another passive, overly agreeabl
 | AI | Gemini 3 via `@google/genai` |
 | Auth (community) | Firebase Anonymous Auth |
 | Database (community) | Firestore via Firebase Admin SDK (server only) |
-| Server (dev) | Vite middleware at `/api/chat` and `/api/community` |
-| Server (prod) | Vercel Functions `api/chat.ts` and `api/community.ts` |
+| Server (dev) | Vite middleware at `/api/chat`, `/api/voice-chat`, and `/api/community` |
+| Server (prod) | Vercel Functions `api/chat.ts`, `api/voice-chat.ts`, and `api/community.ts` |
 | Hosting | Vercel |
 
 The Gemini key is **server-side only**. It is read from `GEMINI_API_KEY` by the dev middleware and by the Vercel Function environment. It is never exposed as a `VITE_` variable. Firebase Admin credentials are also server-only; the browser only receives the public Firebase client configuration needed for anonymous sign-in.
@@ -58,6 +58,8 @@ Open <http://127.0.0.1:5173>.
 ### Without a Gemini key
 
 Leave `GEMINI_API_KEY` empty. The app runs in **demo mode**: the shared demo engine chooses a Bisaya, Filipino, or English response based on the message category and the risk screen. The UI shows a small `Demo` badge on those messages.
+
+Voice messages still need a Gemini key because transcription requires the live model; without one, the voice endpoint returns a clear "not configured" message and the text chat continues in demo mode.
 
 ### With a Gemini key
 
@@ -79,7 +81,7 @@ Leave `GEMINI_API_KEY` empty. The app runs in **demo mode**: the shared demo eng
 
 | Command | What it does |
 | --- | --- |
-| `npm run dev` | Start Vite with the `/api/chat` dev middleware. |
+| `npm run dev` | Start Vite with the `/api/chat`, `/api/voice-chat`, and `/api/community` dev middleware. |
 | `npm run build` | Type-check and build the client into `dist/`. |
 | `npm run typecheck` | Run TypeScript without emitting files. |
 | `npm run preview` | Preview the production build (the chat middleware is also attached to preview). |
@@ -97,9 +99,12 @@ Leave `GEMINI_API_KEY` empty. The app runs in **demo mode**: the shared demo eng
 ```text
 api/
   chat.ts            Vercel Function adapter for `/api/chat`
+  voice-chat.ts      Vercel Function adapter for `/api/voice-chat` (multipart)
   community.ts       Vercel Function adapter for `/api/community`
 server/
   chat.ts            Shared Gemini handler, validation, safety, offline fallback
+  voice.ts           Audio validation, Gemini transcription, transcript + reply
+  multipart.ts       Bounded multipart/form-data reader for voice uploads
   community.ts       Shared community handler: auth, validation, rate limits, DTOs
   communityAuth.ts   Firebase ID-token verification and admin claims
   communityStore.ts  Admin-SDK Firestore reads/writes, cursors, moderation
@@ -133,7 +138,7 @@ firebase.json        Legacy Hosting/Function config plus Firestore rules/indexes
 Browser
   └─ POST /api/chat
        ├─ Vite dev/preview middleware (local)
-       ├─ Firebase Function `chat` (Firebase production)
+       ├─ Firebase Function `chat` (legacy Firebase production)
        └─ Vercel Function `api/chat.ts` (Vercel production)
             └─ handleChat()
                  ├─ validate input + screen the last user message
@@ -142,6 +147,22 @@ Browser
                  ├─ retry transient errors, then try gemini-3.5-flash-lite
                  └─ demo reply if no key / Gemini fails
 ```
+
+### Voice message flow
+
+```text
+Browser (MediaRecorder)
+  └─ POST /api/voice-chat   multipart: audio + history + language + risk
+       └─ Vercel Function `api/voice-chat.ts` (Vite middleware locally)
+            ├─ validate MIME from magic bytes, size, declared duration
+            ├─ Gemini transcribes the audio in the spoken language
+            ├─ replay the transcript through handleChat()
+            └─ return { transcript, message, challenge, tool, risk, demo? }
+```
+
+Audio is kept in memory only and played back from a session-scoped `blob:`
+URL. The transcript is stored in the existing chat history (localStorage); the
+audio itself is never written to Firestore, localStorage, or a storage bucket.
 
 The server never trusts the client's risk assessment alone: it screens the last user message again and takes the maximum of the client's and server's risk level. The model's own risk output is also merged conservatively.
 

@@ -1,5 +1,8 @@
 export type Language = 'ceb' | 'fil' | 'en';
 
+/** Must stay in sync with the voice endpoint's multipart file limit. */
+export const MAX_VOICE_AUDIO_BYTES = 3 * 1024 * 1024;
+
 export type RiskLevel = 'none' | 'watch' | 'elevated' | 'crisis';
 
 export type ToolId =
@@ -42,8 +45,31 @@ export interface ChatApiResponse {
   demo?: boolean;
 }
 
+export interface ChatVoiceApiResponse extends ChatApiResponse {
+  transcript: string;
+}
+
+export type ChatMessageKind = 'text' | 'voice';
+
+export type VoiceMessageStatus = 'processing' | 'ready' | 'failed';
+
+export interface ChatVoice {
+  /**
+   * Session-scoped `blob:` URL for playback. It is intentionally not a
+   * durable storage reference: the app has no configured audio store.
+   */
+  url: string;
+  mimeType: string;
+  durationMs: number;
+  size?: number;
+  status: VoiceMessageStatus;
+}
+
 export interface ChatMessage extends ChatTurn {
   id: string;
+  /** Older saved messages omit this and are treated as plain text. */
+  kind?: ChatMessageKind;
+  voice?: ChatVoice;
   challenge?: string;
   suggestedTool?: ToolId;
   riskLevel?: RiskLevel;
