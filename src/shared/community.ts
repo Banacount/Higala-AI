@@ -103,6 +103,40 @@ export function emptyReactionCounts(): Record<CommunityReaction, number> {
   };
 }
 
+export const REPLY_EMOJI_IDS = [
+  '❤️',
+  '🫂',
+  '🥺',
+  '🤍',
+  '👍',
+  '😢',
+  '🙏',
+  '💪',
+] as const;
+
+export type ReplyEmoji = (typeof REPLY_EMOJI_IDS)[number];
+
+export interface ReplyEmojiOption {
+  emoji: ReplyEmoji;
+  label: string;
+}
+
+export const REPLY_EMOJIS: ReplyEmojiOption[] = [
+  { emoji: '❤️', label: 'Love / support' },
+  { emoji: '🫂', label: 'Sending a hug' },
+  { emoji: '🥺', label: 'I understand / empathy' },
+  { emoji: '🤍', label: 'Comfort / kindness' },
+  { emoji: '👍', label: 'Appreciation' },
+  { emoji: '😢', label: 'Feeling moved' },
+  { emoji: '🙏', label: 'Gratitude / support' },
+  { emoji: '💪', label: 'Encouragement' },
+];
+
+/** Narrows an unknown value to a supported reply emoji. */
+export function isReplyEmoji(value: unknown): value is ReplyEmoji {
+  return typeof value === 'string' && REPLY_EMOJI_IDS.includes(value as ReplyEmoji);
+}
+
 export const COMMUNITY_REPORT_REASON_IDS = [
   'harassment',
   'hate-speech',
@@ -184,6 +218,7 @@ export interface CommunityPost {
   updatedAt: number;
   replyCount: number;
   reactionCounts: Record<CommunityReaction, number>;
+  myReactions?: CommunityReaction[];
   isMine: boolean;
 }
 
@@ -193,10 +228,13 @@ export interface CommunityReply {
   content: string;
   createdAt: number;
   isMine: boolean;
+  reactionCounts?: Record<string, number>;
+  myReactions?: string[];
 }
 
 export interface CommunityReplyList {
   replies: CommunityReply[];
+  nextCursor: string | null;
 }
 
 export interface CommunityPostList {
@@ -231,7 +269,19 @@ export interface CommunityModerationReport {
   status: 'open' | 'reviewed' | 'dismissed';
 }
 
+export interface CommunityModerationReply {
+  id: string;
+  postId: string;
+  content: string;
+  createdAt: number;
+  status: CommunityPostStatus;
+  riskLevel: RiskLevel;
+  needsReview: boolean;
+}
+
 export interface CommunityModerationQueue {
   posts: CommunityModerationPost[];
+  replies: CommunityModerationReply[];
   reports: CommunityModerationReport[];
+  repliesNextCursor: string | null;
 }

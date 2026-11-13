@@ -10,6 +10,8 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { CrisisSupportNote } from '@/components/community/CrisisSupportNote';
+import { CommunityGuidelinesModal } from '@/components/community/CommunityGuidelinesModal';
+import { ReplyEmojiReactions } from '@/components/community/ReplyEmojiReactions';
 import { useAuth } from '@/context/AuthContext';
 import {
   acceptGuidelines as acceptGuidelinesRequest,
@@ -26,49 +28,44 @@ interface CommunityRepliesSectionProps {
   onReplyCountChange?: (delta: number) => void;
 }
 
+/** Renders the reply composer and list for one community post. */
 export function CommunityRepliesSection({
   postId,
   onReplyCountChange,
 }: CommunityRepliesSectionProps) {
   const { getIdToken } = useAuth();
-  const { replies, loading, error: listError, refresh, addReply, removeReply } =
-    useCommunityReplies(postId);
+  const {
+    replies,
+    loading,
+    loadingMore,
+    hasMore,
+    error: listError,
+    refresh,
+    loadMore,
+    addReply,
+    removeReply,
+    updateReplyReactions,
+  } = useCommunityReplies(postId);
 
   const [content, setContent] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [submitInfo, setSubmitInfo] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [needsGuidelines, setNeedsGuidelines] = useState(false);
+  const [guidelinesOpen, setGuidelinesOpen] = useState(false);
   const [acceptingGuidelines, setAcceptingGuidelines] = useState(false);
   const [supportSuggested, setSupportSuggested] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  const handleAcceptGuidelinesAndSubmit = async () => {
-    setAcceptingGuidelines(true);
-    setSubmitError(null);
-    try {
-      const token = await getIdToken();
-      await acceptGuidelinesRequest(token);
-      setNeedsGuidelines(false);
-      // Now proceed to post the reply
-      await submitReply(token);
-    } catch (cause) {
-      setSubmitError(
-        cause instanceof Error
-          ? cause.message
-          : 'Could not accept guidelines. Please try again.',
-      );
-    } finally {
-      setAcceptingGuidelines(false);
-    }
-  };
-
+  /** Publishes the composed reply, handling review and guidelines states. */
   const submitReply = async (tokenOverride?: string) => {
     const trimmed = content.trim();
-    if (!trimmed) return;
+    if (!trimmed || needsGuidelines) return;
 
     setSubmitting(true);
     setSubmitError(null);
+    setSubmitInfo(null);
     setSupportSuggested(false);
 
     try {
@@ -79,8 +76,14 @@ export function CommunityRepliesSection({
       );
 
       setContent('');
-      addReply(result.reply);
-      onReplyCountChange?.(1);
+      if (result.pendingReview) {
+        setSubmitInfo(
+          'Thanks for sharing. Your reply was submitted for review and will appear once it is approved.',
+        );
+      } else {
+        addReply(result.reply);
+        onReplyCountChange?.(1);
+      }
 
       if (result.supportSuggested) {
         setSupportSuggested(true);
@@ -91,8 +94,9 @@ export function CommunityRepliesSection({
         cause.code === 'guidelines_required'
       ) {
         setNeedsGuidelines(true);
+        setGuidelinesOpen(true);
         setSubmitError(
-          'Please accept the community guidelines before posting your first reply.',
+          'Please read and accept the community guidelines before posting your first reply.',
         );
       } else if (
         cause instanceof CommunityApiError &&
@@ -111,12 +115,36 @@ export function CommunityRepliesSection({
     }
   };
 
+  /** Submits the reply form, reopening guidelines when acceptance is required. */
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
     if (needsGuidelines) {
-      void handleAcceptGuidelinesAndSubmit();
-    } else {
-      void submitReply();
+      setSubmitError(
+        'Please read and accept the community guidelines before posting your first reply.',
+      );
+      setGuidelinesOpen(true);
+      return;
+    }
+    void submitReply();
+  };
+
+  /** Records guideline acceptance without automatically submitting the reply. */
+  const handleAcceptGuidelines = async () => {
+    setAcceptingGuidelines(true);
+    setSubmitError(null);
+    try {
+      const token = await getIdToken();
+      await acceptGuidelinesRequest(token);
+      setNeedsGuidelines(false);
+      setGuidelinesOpen(false);
+    } catch (cause) {
+      setSubmitError(
+        cause instanceof Error
+          ? cause.message
+          : 'Could not accept guidelines. Please try again.',
+      );
+    } finally {
+      setAcceptingGuidelines(false);
     }
   };
 
@@ -174,8 +202,8 @@ export function CommunityRepliesSection({
             <span className="flex h-7 w-7 items-center justify-center rounded-full bg-pine-100 text-[0.66rem] font-extrabold text-pine-700">
               A
             </span>
-            <span className="text-[0.7rem]  uppercase tracking-[0.14em] text-pine-800">
-              Replying as <span className="font-bold">Anonymous</span>
+            <span className="text-[0.7rem] font-bold uppercase tracking-[0.14em] text-pine-800">
+              Replying as Anonymous friend
             </span>
           </div>
           <span className="flex items-center gap-1 text-[0.65rem] font-semibold text-muted">
@@ -199,29 +227,45 @@ export function CommunityRepliesSection({
           />
         </div>
 
+        {submitInfo ? (
+          <div className="mt-3 flex items-start gap-2 rounded-xl bg-pine-50 px-3 py-2 text-xs font-semibold text-pine-800">
+            <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <p>{submitInfo}</p>
+          </div>
+        ) : null}
+
         {submitError ? (
           <div className="mt-3 flex items-start gap-2 rounded-xl bg-clay-soft px-3 py-2 text-xs font-semibold text-clay">
             <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
             <div className="flex-1">
               <p>{submitError}</p>
               {needsGuidelines ? (
-                <Button
-                  type="button"
-                  variant="primary"
-                  size="sm"
-                  onClick={handleAcceptGuidelinesAndSubmit}
-                  disabled={acceptingGuidelines}
-                  className="mt-2"
-                >
-                  {acceptingGuidelines ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-                  ) : (
-                    <HeartHandshake className="h-3.5 w-3.5" aria-hidden="true" />
-                  )}
-                  {acceptingGuidelines
-                    ? 'Accepting guidelines…'
-                    : 'I agree to the Community Guidelines'}
-                </Button>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setGuidelinesOpen(true)}
+                  >
+                    Read guidelines
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    onClick={() => void handleAcceptGuidelines()}
+                    disabled={acceptingGuidelines}
+                  >
+                    {acceptingGuidelines ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                    ) : (
+                      <HeartHandshake className="h-3.5 w-3.5" aria-hidden="true" />
+                    )}
+                    {acceptingGuidelines
+                      ? 'Accepting guidelines…'
+                      : 'I agree to the Community Guidelines'}
+                  </Button>
+                </div>
               ) : null}
             </div>
           </div>
@@ -245,7 +289,13 @@ export function CommunityRepliesSection({
           <Button
             type="submit"
             size="sm"
-            disabled={submitting || acceptingGuidelines || !content.trim() || isOverLimit}
+            disabled={
+              submitting ||
+              acceptingGuidelines ||
+              !content.trim() ||
+              isOverLimit ||
+              needsGuidelines
+            }
           >
             {submitting || acceptingGuidelines ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
@@ -256,6 +306,11 @@ export function CommunityRepliesSection({
           </Button>
         </div>
       </form>
+
+      <CommunityGuidelinesModal
+        open={guidelinesOpen}
+        onClose={() => setGuidelinesOpen(false)}
+      />
 
       {/* Delete error notification */}
       {deleteError ? (
@@ -315,7 +370,7 @@ export function CommunityRepliesSection({
                       A
                     </span>
                     <span className="text-[0.68rem] font-bold uppercase tracking-[0.14em] text-muted">
-                      Anonymous
+                      Anonymous friend
                     </span>
                     {reply.isMine ? (
                       <span className="rounded-full bg-pine-100 px-2 py-0.5 text-[0.58rem] font-bold uppercase tracking-[0.12em] text-pine-700">
@@ -333,14 +388,25 @@ export function CommunityRepliesSection({
                   {reply.content}
                 </p>
 
-                {reply.isMine ? (
-                  <div className="mt-3 flex justify-end border-t border-pine-900/6 pt-2.5">
+                {/* Reply emoji reactions & self-deletion */}
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-pine-900/6 pt-2">
+                  <ReplyEmojiReactions
+                    postId={postId}
+                    replyId={reply.id}
+                    counts={reply.reactionCounts}
+                    myReactions={reply.myReactions}
+                    onReactionChange={(nextCounts, nextMyReactions) =>
+                      updateReplyReactions(reply.id, nextCounts, nextMyReactions)
+                    }
+                  />
+
+                  {reply.isMine ? (
                     <Button
                       variant="danger"
                       size="sm"
                       onClick={() => void handleDelete(reply)}
                       disabled={isDeleting}
-                      className="text-xs"
+                      className="text-xs ml-auto"
                     >
                       {isDeleting ? (
                         <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
@@ -349,11 +415,27 @@ export function CommunityRepliesSection({
                       )}
                       {isDeleting ? 'Deleting…' : 'Delete'}
                     </Button>
-                  </div>
-                ) : null}
+                  ) : null}
+                </div>
               </article>
             );
           })}
+          {hasMore ? (
+            <div className="flex justify-center pt-1">
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={loadMore}
+                disabled={loadingMore}
+              >
+                {loadingMore ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                ) : null}
+                {loadingMore ? 'Loading more replies…' : 'Load more replies'}
+              </Button>
+            </div>
+          ) : null}
         </div>
       )}
     </section>

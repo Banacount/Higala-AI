@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -10,6 +10,7 @@ import {
   RefreshCw,
   ShieldAlert,
   ShieldCheck,
+  Trash2,
 } from 'lucide-react';
 import { PageHeader, PageShell } from '@/components/PageShell';
 import { Button, buttonStyles } from '@/components/ui/Button';
@@ -20,6 +21,7 @@ import {
   CommunityApiError,
   getModerationQueue,
   moderatePost,
+  moderateReply,
 } from '@/lib/communityClient';
 import {
   COMMUNITY_REPORT_REASONS,
@@ -46,6 +48,7 @@ function RiskBadge({ post }: { post: CommunityModerationPost }) {
   return null;
 }
 
+/** Renders the moderator queue and its moderation actions. */
 export function CommunityModerationPage() {
   const {
     status: authStatus,
@@ -55,12 +58,22 @@ export function CommunityModerationPage() {
   } = useAuth();
   const [queue, setQueue] = useState<CommunityModerationQueue | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingMoreReplies, setLoadingMoreReplies] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [checkingAccess, setCheckingAccess] = useState(false);
+  const loadGeneration = useRef(0);
+  const appendRequestId = useRef(0);
 
+  /** Loads a fresh moderation queue and supersedes any in-flight append. */
   const load = useCallback(async () => {
+    const generation = loadGeneration.current + 1;
+    loadGeneration.current = generation;
+    // A replacement load supersedes any append that is still in flight.
+    appendRequestId.current += 1;
+    setLoadingMoreReplies(false);
+
     if (authStatus !== 'ready' || !isAdmin) {
       setLoading(false);
       return;
@@ -71,9 +84,11 @@ export function CommunityModerationPage() {
     try {
       const token = await getIdToken();
       const result = await getModerationQueue(token);
+      if (loadGeneration.current !== generation) return;
       setQueue(result);
       setForbidden(false);
     } catch (cause) {
+      if (loadGeneration.current !== generation) return;
       if (
         cause instanceof CommunityApiError &&
         (cause.status === 403 || cause.status === 401)
@@ -87,9 +102,81 @@ export function CommunityModerationPage() {
         );
       }
     } finally {
-      setLoading(false);
+      if (loadGeneration.current === generation) {
+        setLoading(false);
+      }
     }
   }, [authStatus, getIdToken, isAdmin]);
+
+  /** Appends the next flagged-reply page only while its load generation is current. */
+  const loadMoreReplies = useCallback(async () => {
+    if (
+      authStatus !== 'ready' ||
+      !isAdmin ||
+      !queue?.repliesNextCursor ||
+      loadingMoreReplies
+    ) {
+      return;
+    }
+
+    setLoadingMoreReplies(true);
+    setError(null);
+    const generation = loadGeneration.current;
+    const currentAppend = appendRequestId.current + 1;
+    appendRequestId.current = currentAppend;
+    try {
+      const token = await getIdToken();
+      const result = await getModerationQueue(token, {
+        repliesCursor: queue.repliesNextCursor,
+      });
+      if (
+        loadGeneration.current !== generation ||
+        appendRequestId.current !== currentAppend
+      ) {
+        return;
+      }
+      setQueue((prev) =>
+        prev
+          ? {
+              ...prev,
+              replies: [
+                ...prev.replies,
+                ...result.replies.filter(
+                  (reply) => !prev.replies.some((existing) => existing.id === reply.id),
+                ),
+              ],
+              repliesNextCursor: result.repliesNextCursor,
+            }
+          : result,
+      );
+    } catch (cause) {
+      if (
+        loadGeneration.current !== generation ||
+        appendRequestId.current !== currentAppend
+      ) {
+        return;
+      }
+      if (
+        cause instanceof CommunityApiError &&
+        (cause.status === 403 || cause.status === 401)
+      ) {
+        setForbidden(true);
+      } else {
+        setError(
+          cause instanceof Error
+            ? cause.message
+            : 'More flagged replies could not be loaded.',
+        );
+      }
+    } finally {
+      if (
+        loadGeneration.current === generation &&
+        appendRequestId.current === currentAppend
+      ) {
+        setLoadingMoreReplies(false);
+      }
+    }
+  }, [authStatus, getIdToken, isAdmin, loadingMoreReplies, queue]);
 
   useEffect(() => {
     void load();
@@ -126,6 +213,28 @@ export function CommunityModerationPage() {
     try {
       const token = await getIdToken();
       await moderatePost({ postId, action }, token);
+      await load();
+    } catch (cause) {
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : 'The moderation action failed.',
+      );
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const actReply = async (
+    postId: string,
+    replyId: string,
+    action: CommunityModerationAction,
+  ) => {
+    setBusyId(replyId);
+    setError(null);
+    try {
+      const token = await getIdToken();
+      await moderateReply({ postId, replyId, action }, token);
       await load();
     } catch (cause) {
       setError(
@@ -291,6 +400,110 @@ export function CommunityModerationPage() {
                           </Link>
                         </div>
                       ))}
+                    </div>
+                  )}
+                </section>
+
+                <section>
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <h2 className="font-display text-xl font-semibold text-pine-950">
+                      Flagged replies
+                    </h2>
+                    <Badge tone="sun">{queue.replies.length} replies</Badge>
+                  </div>
+                  {queue.replies.length === 0 ? (
+                    <p className="rounded-2xl border border-dashed border-pine-900/12 bg-white/50 px-4 py-6 text-sm text-muted">
+                      No replies are waiting for review.
+                    </p>
+                  ) : (
+                    <div className="space-y-3">
+                      {queue.replies.map((reply) => (
+                        <article
+                          key={reply.id}
+                          className="rounded-2xl border border-pine-900/8 bg-white/75 p-4"
+                        >
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Badge
+                              tone={reply.status === 'visible' ? 'pine' : 'clay'}
+                            >
+                              {reply.status === 'hidden'
+                                ? 'Pending review'
+                                : reply.status === 'deleted'
+                                  ? 'Deleted'
+                                  : 'Visible'}
+                            </Badge>
+                            {reply.riskLevel === 'crisis' ||
+                            reply.riskLevel === 'elevated' ? (
+                              <Badge tone="sun">Crisis signal · support first</Badge>
+                            ) : reply.riskLevel === 'watch' ? (
+                              <Badge tone="outline">Watch</Badge>
+                            ) : null}
+                            <span className="ml-auto text-[0.66rem] text-muted">
+                              {formatRelativeTime(reply.createdAt)}
+                            </span>
+                          </div>
+
+                          <p className="mt-2 max-h-48 overflow-y-auto whitespace-pre-line text-sm leading-relaxed text-ink/85">
+                            {reply.content}
+                          </p>
+
+                          <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-pine-900/6 pt-3">
+                            <Link
+                              to={`/community/${reply.postId}`}
+                              className="mr-auto text-xs font-bold text-pine-800 underline underline-offset-2"
+                            >
+                              Open parent post
+                            </Link>
+                            {reply.status !== 'deleted' ? (
+                              <>
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  disabled={busyId === reply.id}
+                                  onClick={() =>
+                                    void actReply(reply.postId, reply.id, 'restore')
+                                  }
+                                >
+                                  <Check className="h-3.5 w-3.5" aria-hidden="true" />
+                                  Approve
+                                </Button>
+                                <Button
+                                  variant="danger"
+                                  size="sm"
+                                  disabled={busyId === reply.id}
+                                  onClick={() =>
+                                    void actReply(reply.postId, reply.id, 'hide')
+                                  }
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                                  Reject
+                                </Button>
+                              </>
+                            ) : null}
+                          </div>
+                        </article>
+                      ))}
+                      {queue.repliesNextCursor ? (
+                        <div className="flex justify-center pt-1">
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => void loadMoreReplies()}
+                            disabled={loadingMoreReplies}
+                          >
+                            {loadingMoreReplies ? (
+                              <Loader2
+                                className="h-3.5 w-3.5 animate-spin"
+                                aria-hidden="true"
+                              />
+                            ) : null}
+                            {loadingMoreReplies
+                              ? 'Loading more replies…'
+                              : 'Load more flagged replies'}
+                          </Button>
+                        </div>
+                      ) : null}
                     </div>
                   )}
                 </section>

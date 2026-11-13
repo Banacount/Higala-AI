@@ -2,10 +2,14 @@ import {
   COMMUNITY_LIMITS,
   isCommunityCategory,
   isCommunityModerationAction,
+  isCommunityReaction,
   isCommunityReportReason,
+  isReplyEmoji,
   type CommunityCategory,
   type CommunityModerationAction,
+  type CommunityReaction,
   type CommunityReportReason,
+  type ReplyEmoji,
 } from '../src/shared/community.ts';
 import { CommunityError } from './communityErrors.ts';
 
@@ -20,10 +24,27 @@ export interface CreateReplyInput {
   content: string;
 }
 
+export interface ToggleReactionInput {
+  postId: string;
+  reaction: CommunityReaction;
+}
+
+export interface ToggleReplyReactionInput {
+  postId: string;
+  replyId: string;
+  emoji: ReplyEmoji;
+}
+
 export interface ReportPostInput {
   postId: string;
   reason: CommunityReportReason;
   description: string;
+}
+
+export interface ModerateReplyInput {
+  postId: string;
+  replyId: string;
+  action: CommunityModerationAction;
 }
 
 export interface ModeratePostInput {
@@ -106,6 +127,27 @@ export function parseCreateReply(body: unknown): CreateReplyInput {
   return { postId, content };
 }
 
+/** Parses and validates a request to toggle a post reaction. */
+export function parseToggleReaction(body: unknown): ToggleReactionInput {
+  const record = asRecord(body);
+  const postId = parsePostId(record.postId);
+  if (!isCommunityReaction(record.reaction)) {
+    throw new CommunityError('Choose a valid supportive reaction.');
+  }
+  return { postId, reaction: record.reaction };
+}
+
+/** Parses and validates a request to toggle a reply emoji reaction. */
+export function parseToggleReplyReaction(body: unknown): ToggleReplyReactionInput {
+  const record = asRecord(body);
+  const postId = parsePostId(record.postId);
+  const replyId = parseReplyId(record.replyId);
+  if (!isReplyEmoji(record.emoji)) {
+    throw new CommunityError('Choose a valid supportive emoji reaction.');
+  }
+  return { postId, replyId, emoji: record.emoji };
+}
+
 export function parsePostId(value: unknown, label = 'Post'): string {
   if (typeof value !== 'string' || !POST_ID_PATTERN.test(value)) {
     throw new CommunityError(`${label} is invalid.`);
@@ -120,6 +162,7 @@ export function parseReplyId(value: unknown, label = 'Reply'): string {
   return value;
 }
 
+/** Parses and validates a request to report a post. */
 export function parseReportPost(body: unknown): ReportPostInput {
   const record = asRecord(body);
   const postId = parsePostId(record.postId);
@@ -134,6 +177,17 @@ export function parseReportPost(body: unknown): ReportPostInput {
   return { postId, reason: record.reason, description };
 }
 
+/** Parses and validates a moderation action for a reply. */
+export function parseModerateReply(body: unknown): ModerateReplyInput {
+  const record = asRecord(body);
+  const postId = parsePostId(record.postId);
+  const replyId = parseReplyId(record.replyId);
+  if (!isCommunityModerationAction(record.moderationAction)) {
+    throw new CommunityError('Choose a valid moderation action.');
+  }
+  return { postId, replyId, action: record.moderationAction };
+}
+
 export function parseModeratePost(body: unknown): ModeratePostInput {
   const record = asRecord(body);
   const postId = parsePostId(record.postId);
@@ -143,6 +197,7 @@ export function parseModeratePost(body: unknown): ModeratePostInput {
   return { postId, action: record.moderationAction };
 }
 
+/** Parses feed filters and caps the requested page size. */
 export function parseFeedQuery(params: URLSearchParams): {
   category: CommunityCategory | null;
   cursor: string | null;
@@ -176,6 +231,52 @@ export function parseFeedQuery(params: URLSearchParams): {
   }
 
   return { category, cursor: cursor || null, limit };
+}
+
+/** Parses reply pagination options and caps the requested page size. */
+export function parseRepliesQuery(params: URLSearchParams): {
+  cursor: string | null;
+  limit: number;
+} {
+  const rawLimit = params.get('limit');
+  let limit: number = COMMUNITY_LIMITS.pageSize;
+  if (rawLimit) {
+    const parsed = Number(rawLimit);
+    if (!Number.isFinite(parsed) || parsed < 1) {
+      throw new CommunityError('The page size is invalid.');
+    }
+    limit = Math.min(Math.floor(parsed), COMMUNITY_LIMITS.maxPageSize);
+  }
+
+  const cursor = params.get('cursor');
+  if (cursor && cursor.length > COMMUNITY_LIMITS.cursor) {
+    throw new CommunityError('The page cursor is invalid.');
+  }
+
+  return { cursor: cursor || null, limit };
+}
+
+/** Parses moderation-queue pagination options for flagged replies. */
+export function parseModerationQueueQuery(params: URLSearchParams): {
+  repliesCursor: string | null;
+  repliesLimit: number;
+} {
+  const rawLimit = params.get('repliesLimit') ?? params.get('limit');
+  let repliesLimit = 30;
+  if (rawLimit) {
+    const parsed = Number(rawLimit);
+    if (!Number.isFinite(parsed) || parsed < 1) {
+      throw new CommunityError('The page size is invalid.');
+    }
+    repliesLimit = Math.min(Math.floor(parsed), COMMUNITY_LIMITS.maxPageSize);
+  }
+
+  const cursor = params.get('repliesCursor') ?? params.get('cursor');
+  if (cursor && cursor.length > COMMUNITY_LIMITS.cursor) {
+    throw new CommunityError('The page cursor is invalid.');
+  }
+
+  return { repliesCursor: cursor || null, repliesLimit };
 }
 
 export function parseAction(value: unknown): string {
