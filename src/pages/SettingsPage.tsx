@@ -246,8 +246,8 @@ export function SettingsPage() {
         eyebrow="Settings"
         title={
           <>
-            Ikaw ug ang imong{' '}
-            <span className="italic text-pine-600">datos.</span>
+            You and your{' '}
+            <span className="italic text-pine-600">data.</span>
           </>
         }
         subtitle="Change how Higala speaks to you, see what is stored on this device, or clear it. Your data is yours—handle it that way."
@@ -282,7 +282,7 @@ export function SettingsPage() {
               </span>
               <div className="min-w-0">
                 <p className="truncate text-xs font-bold text-pine-950">
-                  {profile.name.trim() || 'Bag-ong higala'}
+                  {profile.name.trim() || 'New friend'}
                 </p>
                 <p className="text-[0.6rem] text-muted">
                   Local profile · no account needed
@@ -300,7 +300,7 @@ export function SettingsPage() {
               id="settings-name"
               value={profile.name}
               onChange={(event) => setName(event.target.value.slice(0, 60))}
-              placeholder="e.g. Bai, Ate, Kuya, or your name"
+              placeholder="e.g. Sam, Alex, or your nickname"
               autoComplete="off"
               className="mt-1.5 w-full rounded-xl border border-pine-900/10 bg-white/70 px-3 py-2.5 text-sm text-ink outline-none transition placeholder:text-muted/40 focus:border-pine-400 focus:bg-white"
             />
@@ -338,8 +338,8 @@ export function SettingsPage() {
               })}
             </div>
             <p className="mt-2 text-[0.65rem] leading-relaxed text-muted">
-              Higala replies in this language. Bisaya uses Kagay-anon Cebuano,
-              not formal textbook Cebuano.
+              Higala replies in this language. You can switch between English,
+              Bisaya, and Tagalog anytime.
             </p>
           </SettingCard>
 

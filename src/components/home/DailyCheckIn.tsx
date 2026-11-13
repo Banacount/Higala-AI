@@ -29,7 +29,7 @@ export function DailyCheckIn() {
                 Daily check-in
               </p>
               <h2 className="mt-1 font-display text-[1.5rem] font-semibold leading-tight text-pine-950">
-                Unsa imong gibati?
+                How are you feeling?
               </h2>
               <p className="mt-1 text-xs leading-relaxed text-muted">
                 No wrong answer. Just the honest one.
@@ -82,7 +82,7 @@ export function DailyCheckIn() {
             {savedToday ? (
               <span className="inline-flex items-center gap-1.5 text-[0.68rem] font-semibold text-pine-700">
                 <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
-                Narehistro na. Salamat sa pagkamatinud-anon.
+                Logged. Thank you for being honest.
               </span>
             ) : (
               <span className="text-[0.68rem] font-medium text-muted/70">
@@ -108,9 +108,9 @@ export function DailyCheckIn() {
               {streak}
             </span>
             <span className="pb-0.5 text-[0.62rem] leading-tight text-pine-900/55">
-              ka adlaw
+              {streak === 1 ? 'day' : 'days'}
               <br />
-              nga nagpakita
+              showing up
             </span>
             <span className="ml-auto rounded-full bg-pine-100 px-2 py-1 text-[0.55rem] font-extrabold uppercase tracking-[0.08em] text-pine-700">
               {checkedThisWeek}/7
@@ -148,7 +148,7 @@ export function DailyCheckIn() {
 
           <p className="mt-3 text-[0.68rem] leading-relaxed text-muted">
             {streak > 0
-              ? `Karong semanaha, ${checkedThisWeek} ka adlaw ang imong gi-check in.`
+              ? `This week, you checked in on ${checkedThisWeek} ${checkedThisWeek === 1 ? 'day' : 'days'}.`
               : 'Start today. One honest check-in is enough.'}
           </p>
         </div>

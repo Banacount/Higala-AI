@@ -40,7 +40,7 @@ export function CommunityPage() {
   return (
     <PageShell>
       <PageHeader
-        eyebrow="Komunidad · Community"
+        eyebrow="Community"
         title="Anonymous Sharing"
         subtitle="A quieter corner of Higala. Share what you are carrying, read what others are carrying too, and leave each other a little lighter."
         action={
@@ -85,7 +85,7 @@ export function CommunityPage() {
             </p>
           </div>
           <p className="mt-1.5 text-xs leading-relaxed text-muted">
-            Bisaya, Filipino, English, or a mix. Write the way you think.
+            English, Bisaya, Filipino, or a mix. Write the way you think.
           </p>
         </div>
       </div>

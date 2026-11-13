@@ -32,7 +32,7 @@ export function ThoughtRecordTool() {
   const save = (event: FormEvent) => {
     event.preventDefault();
     if (!form.situation.trim() || !form.thought.trim()) {
-      setError('Isulat una ang nahitabo ug ang giingon sa imong hunahuna.');
+      setError('Write down what happened and what your mind told you first.');
       return;
     }
     addThoughtRecord({
@@ -70,7 +70,7 @@ export function ThoughtRecordTool() {
             />
             <div>
               <p className="text-xs font-bold text-pine-900">
-                Natala na sa device.
+                Saved on this device.
               </p>
               <p className="mt-0.5 text-[0.66rem] leading-relaxed text-muted">
                 You can come back to this. For now, take one slow breath.
@@ -93,7 +93,7 @@ export function ThoughtRecordTool() {
             htmlFor="thought-situation"
             className="text-[0.62rem] font-extrabold uppercase tracking-[0.12em] text-pine-700"
           >
-            01 · Unsa ang nahitabo?
+            01 · What happened?
           </label>
           <p className="mb-1.5 mt-0.5 text-[0.66rem] leading-relaxed text-muted">
             Facts first. Where were you, who was there, what was said?
@@ -108,7 +108,7 @@ export function ThoughtRecordTool() {
               }))
             }
             rows={2}
-            placeholder="e.g. Gisulti sa akong boss nga kulang akong report atubangan sa team."
+            placeholder="e.g. My manager said my report was incomplete in front of the team."
             className="w-full resize-none rounded-xl border border-pine-900/10 bg-white/70 px-3 py-2.5 text-sm leading-relaxed text-ink outline-none transition placeholder:text-muted/40 focus:border-pine-400 focus:bg-white"
           />
         </div>
@@ -118,7 +118,7 @@ export function ThoughtRecordTool() {
             htmlFor="thought-automatic"
             className="text-[0.62rem] font-extrabold uppercase tracking-[0.12em] text-pine-700"
           >
-            02 · Unsa ang giingon sa imong hunahuna?
+            02 · What did your mind say?
           </label>
           <p className="mb-1.5 mt-0.5 text-[0.66rem] leading-relaxed text-muted">
             The first sentence that showed up. Do not clean it up.
@@ -133,14 +133,14 @@ export function ThoughtRecordTool() {
               }))
             }
             rows={2}
-            placeholder="e.g. Tapulan ko. Wala na koy pulos dinhi."
+            placeholder="e.g. I’m lazy. I’m completely useless here."
             className="w-full resize-none rounded-xl border border-pine-900/10 bg-white/70 px-3 py-2.5 text-sm leading-relaxed text-ink outline-none transition placeholder:text-muted/40 focus:border-pine-400 focus:bg-white"
           />
         </div>
 
         <div>
           <p className="text-[0.62rem] font-extrabold uppercase tracking-[0.12em] text-pine-700">
-            03 · Unsang distortion ang naa?
+            03 · Which thinking traps fit?
           </p>
           <p className="mb-2 mt-0.5 text-[0.66rem] leading-relaxed text-muted">
             Choose any that fit. No need to be perfect.
@@ -161,7 +161,7 @@ export function ThoughtRecordTool() {
                       : 'border-pine-900/10 bg-white/65 text-pine-800 hover:border-pine-300'
                   }`}
                 >
-                  {distortion.ceb}
+                  {distortion.en}
                 </button>
               );
             })}
@@ -174,7 +174,7 @@ export function ThoughtRecordTool() {
               htmlFor="thought-evidence-for"
               className="text-[0.62rem] font-extrabold uppercase tracking-[0.12em] text-pine-700"
             >
-              04 · Ebidensya nga nagsuporta
+              04 · Evidence that supports it
             </label>
             <p className="mb-1.5 mt-0.5 text-[0.66rem] leading-relaxed text-muted">
               What makes the thought feel true?
@@ -198,7 +198,7 @@ export function ThoughtRecordTool() {
               htmlFor="thought-evidence-against"
               className="text-[0.62rem] font-extrabold uppercase tracking-[0.12em] text-pine-700"
             >
-              05 · Ebidensya nga kontra
+              05 · Evidence against it
             </label>
             <p className="mb-1.5 mt-0.5 text-[0.66rem] leading-relaxed text-muted">
               What does the thought ignore?
@@ -224,7 +224,7 @@ export function ThoughtRecordTool() {
             htmlFor="thought-balanced"
             className="text-[0.62rem] font-extrabold uppercase tracking-[0.12em] text-pine-700"
           >
-            06 · Mas tinuod nga hunahuna
+            06 · A truer, more balanced thought
           </label>
           <p className="mb-1.5 mt-0.5 text-[0.66rem] leading-relaxed text-muted">
             Not “everything is great.” Just more accurate and more fair to
@@ -240,7 +240,7 @@ export function ThoughtRecordTool() {
               }))
             }
             rows={3}
-            placeholder="e.g. Nasayop ko niini nga report, pero dili na nagpasabot nga wala koy pulos. Makakat-on ko ug makabalik."
+            placeholder="e.g. I missed a section on this report, but that doesn’t mean I’m useless. I can learn from it and fix it."
             className="w-full resize-none rounded-xl border border-pine-900/10 bg-white/70 px-3 py-2.5 text-sm leading-relaxed text-ink outline-none transition placeholder:text-muted/40 focus:border-pine-400 focus:bg-white"
           />
         </div>

@@ -9,15 +9,15 @@ export function CandorCard({ onOpen }: { onOpen: () => void }) {
           The Higala way
         </p>
         <span className="text-[0.56rem] font-extrabold uppercase tracking-[0.14em] text-pine-600/50">
-          Higalaay
+          Radical candor
         </span>
       </div>
 
       <p className="mt-3 font-display text-[1.4rem] font-medium leading-[1.25] text-pine-950">
-        “Dili mi moingon nga okay ra kung dili.”
+        “We won’t say it’s okay when it isn’t.”
       </p>
       <p className="mt-2 text-xs leading-relaxed text-muted">
-        We won’t say it’s okay when it isn’t. That is avoidance, not kindness.
+        Calling something fine when it’s hurting you is avoidance, not kindness.
       </p>
 
       <div className="mt-auto pt-4">

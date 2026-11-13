@@ -46,7 +46,7 @@ export function QuickTools() {
             Small tools, hard moments
           </p>
           <h2 className="mt-1 font-display text-[1.5rem] font-semibold leading-tight text-pine-950">
-            Ayaw og atubang nga walay himan.
+            Don’t face hard moments empty-handed.
           </h2>
         </div>
         <Link

@@ -70,8 +70,8 @@ function chatApiPlugin(env: Record<string, string>): Plugin {
     try {
       const body = await readChatBody(req);
       const result = await handleChat(body, {
-        apiKey: env.GEMINI_API_KEY,
-        model: env.GEMINI_MODEL,
+        apiKey: env.GEMINI_API_KEY || process.env.GEMINI_API_KEY,
+        model: env.GEMINI_MODEL || process.env.GEMINI_MODEL,
       });
 
       res.statusCode = 200;

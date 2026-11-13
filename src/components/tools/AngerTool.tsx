@@ -10,31 +10,31 @@ import {
 import { Button } from '@/components/ui/Button';
 
 const SIGNALS = [
-  'init ang ulo',
-  'kombulsyon',
-  'kusog ang tingog',
-  'mura og mosinggit',
-  'gusto mobalik sa away',
-  'mangurog',
-  'dili makahunahuna',
+  'head feels hot',
+  'racing heart',
+  'loud voice',
+  'wanting to yell',
+  'wanting to fight back',
+  'shaking',
+  'can’t think straight',
 ];
 
 const NEXT_STEPS = [
-  'Mogawas og 5 minuto',
-  'Mo-inom og tubig',
-  'Mohigda og pahulay',
-  'Motawag sa higala',
-  'Mosulat sa akong gibati',
+  'Step outside for 5 minutes',
+  'Drink a glass of water',
+  'Lie down and rest',
+  'Call a friend',
+  'Write down what I feel',
 ];
 
 const SCRIPT =
-  'Kinahanglan ko og gamay nga panahon. Balik ko inig kalma na ko.';
+  'I need a few minutes. I’ll come back when I’ve cooled down.';
 
 function heatLabel(value: number): { label: string; color: string } {
-  if (value <= 3) return { label: 'Kalmado pa', color: '#239C72' };
-  if (value <= 6) return { label: 'Init na', color: '#C98F2E' };
-  if (value <= 8) return { label: 'Pirti init', color: '#C0703A' };
-  return { label: 'Puno na', color: '#B85C38' };
+  if (value <= 3) return { label: 'Still calm', color: '#239C72' };
+  if (value <= 6) return { label: 'Heating up', color: '#C98F2E' };
+  if (value <= 8) return { label: 'Running hot', color: '#C0703A' };
+  return { label: 'About to boil', color: '#B85C38' };
 }
 
 export function AngerTool() {
@@ -106,7 +106,7 @@ export function AngerTool() {
         <div className="flex items-end justify-between gap-3">
           <div>
             <p className="text-[0.62rem] font-extrabold uppercase tracking-[0.12em] text-pine-700">
-              Unsa ka init karon?
+              How heated are you right now?
             </p>
             <p className="mt-1 font-display text-2xl font-semibold" style={{ color: mood.color }}>
               {mood.label}
@@ -137,7 +137,7 @@ export function AngerTool() {
 
       <div>
         <p className="text-[0.62rem] font-extrabold uppercase tracking-[0.12em] text-pine-700">
-          Unsa ang naa sa imong lawas?
+          What’s happening in your body?
         </p>
         <div className="mt-2 flex flex-wrap gap-1.5">
           {SIGNALS.map((signal) => {
@@ -228,7 +228,7 @@ export function AngerTool() {
 
       <div>
         <p className="text-[0.62rem] font-extrabold uppercase tracking-[0.12em] text-pine-700">
-          Unsay sunod nimong buhaton?
+          What will you do next?
         </p>
         <div className="mt-2 flex flex-wrap gap-1.5">
           {NEXT_STEPS.map((step) => {
@@ -252,7 +252,7 @@ export function AngerTool() {
         </div>
         {nextStep ? (
           <p className="mt-2 text-[0.68rem] font-semibold text-pine-700">
-            Sige. {nextStep}. Usa ka lakang, dili tibuok kinabuhi.
+            Okay. {nextStep}. One step, not your whole life.
           </p>
         ) : null}
       </div>

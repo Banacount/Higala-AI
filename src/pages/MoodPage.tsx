@@ -30,7 +30,7 @@ const LEVELS = [1, 2, 3, 4, 5] as const;
 
 function insightFor(average: number | null): string {
   if (average === null) {
-    return 'Wala pa kay check-in karong semanaha. One honest tap is enough to start—dili kinahanglan perfect.';
+    return 'No check-ins yet this week. One honest tap is enough to start—it doesn’t have to be perfect.';
   }
   if (average < 2.5) {
     return 'Mostly low this week. That is information, not a verdict. If this has lasted two weeks or more, consider talking to a professional. If you feel unsafe, call 1553 or 911.';
@@ -86,8 +86,8 @@ export function MoodPage() {
         eyebrow="Mood check-in"
         title={
           <>
-            Unsa ang tinuod nimong{' '}
-            <span className="italic text-pine-600">gibati?</span>
+            How are you actually{' '}
+            <span className="italic text-pine-600">feeling?</span>
           </>
         }
         subtitle="Not the answer you think you should give. The honest one. Your check-ins stay on this device and help you see patterns you would otherwise miss."
@@ -112,7 +112,7 @@ export function MoodPage() {
                 {formatLongDate()}
               </p>
               <h2 className="mt-1 font-display text-[1.6rem] font-semibold leading-tight text-pine-950">
-                Unsa imong gibati karon?
+                How are you feeling right now?
               </h2>
               <p className="mt-1 text-xs leading-relaxed text-muted">
                 Pick the face that is closest. You can change it any time.
@@ -163,7 +163,7 @@ export function MoodPage() {
 
           <div className="mt-5 border-t border-pine-900/6 pt-4">
             <p className="text-[0.62rem] font-extrabold uppercase tracking-[0.12em] text-pine-700">
-              Unsa ang nakaapekto?
+              What’s affecting it?
             </p>
             <p className="mb-2 mt-0.5 text-[0.68rem] leading-relaxed text-muted">
               Optional. Tags make patterns visible later.
@@ -195,7 +195,7 @@ export function MoodPage() {
               htmlFor="mood-note"
               className="text-[0.62rem] font-extrabold uppercase tracking-[0.12em] text-pine-700"
             >
-              Gusto nimo isulti pa?
+              Want to say more?
             </label>
             <p className="mb-1.5 mt-0.5 text-[0.68rem] leading-relaxed text-muted">
               A sentence is enough. No one else will read this.
@@ -207,7 +207,7 @@ export function MoodPage() {
                 updateTodayMood({ note: event.target.value.slice(0, 1_200) })
               }
               rows={3}
-              placeholder="e.g. Kapoy kaayo ko pero wala koy klarong rason. Naguol ko nga wala ko nag-uswag."
+              placeholder="e.g. I feel exhausted for no clear reason. I’m frustrated that I’m not making progress."
               className="w-full resize-none rounded-xl border border-pine-900/10 bg-white/70 px-3 py-2.5 text-sm leading-relaxed text-ink outline-none transition placeholder:text-muted/40 focus:border-pine-400 focus:bg-white"
             />
             <p className="mt-1 text-right text-[0.58rem] font-semibold text-muted/50">
@@ -329,7 +329,7 @@ export function MoodPage() {
               History
             </p>
             <h2 className="mt-1 font-display text-[1.55rem] font-semibold leading-tight text-pine-950">
-              Tanang check-in.
+              All check-ins.
             </h2>
           </div>
           <span className="rounded-full border border-pine-900/10 bg-white/60 px-3 py-1.5 text-[0.6rem] font-extrabold uppercase tracking-[0.1em] text-pine-700">
@@ -341,7 +341,7 @@ export function MoodPage() {
           <div className="rounded-[1.4rem] border border-dashed border-pine-300 bg-white/45 p-8 text-center">
             <MoodFace level={3} size={52} className="mx-auto" />
             <p className="mt-3 font-display text-lg font-semibold text-pine-950">
-              Wala pa kay check-in.
+              No check-ins yet.
             </p>
             <p className="mx-auto mt-1 max-w-md text-xs leading-relaxed text-muted">
               Your first honest check-in will appear here. Pick a face above—not

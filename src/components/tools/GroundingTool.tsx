@@ -46,7 +46,7 @@ export function GroundingTool() {
             <Sparkles className="h-6 w-6" aria-hidden="true" />
           </div>
           <h3 className="mt-4 font-display text-2xl font-semibold text-pine-950">
-            Balik ka sa karon.
+            You’re back in the present.
           </h3>
           <p className="mx-auto mt-1.5 max-w-sm text-sm leading-relaxed text-muted">
             You came back through your senses. Notice your feet on the floor and

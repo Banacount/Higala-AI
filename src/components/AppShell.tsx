@@ -20,39 +20,34 @@ import { initials } from '@/lib/utils';
 import { LANGUAGE_OPTIONS } from '@/lib/constants';
 
 const NAV_ITEMS = [
-  { to: '/', label: 'Panimalay', english: 'Home', icon: House, end: true },
+  { to: '/', label: 'Home', icon: House, end: true },
   {
     to: '/chat',
-    label: 'Kaistorya',
-    english: 'Talk',
+    label: 'Talk',
     icon: MessageCircle,
     end: false,
   },
   {
     to: '/community',
-    label: 'Komunidad',
-    english: 'Community',
+    label: 'Community',
     icon: Users,
     end: false,
   },
   {
     to: '/toolkit',
-    label: 'Mga Himan',
-    english: 'Tools',
+    label: 'Tools',
     icon: Sprout,
     end: false,
   },
   {
     to: '/mood',
-    label: 'Gibati',
-    english: 'Mood',
+    label: 'Mood',
     icon: HeartPulse,
     end: false,
   },
   {
     to: '/resources',
-    label: 'Tabang',
-    english: 'Help',
+    label: 'Help',
     icon: LifeBuoy,
     end: false,
   },
@@ -76,7 +71,7 @@ export function Sidebar() {
           <Wordmark inverted />
         </NavLink>
         <p className="pl-[3.25rem] text-[0.62rem] font-bold uppercase tracking-[0.18em] text-pine-200/45">
-          Higalaay, dili yes-man
+          A real friend, not a yes-man
         </p>
 
         <nav className="mt-8 flex-1 space-y-1.5" aria-label="Main navigation">
@@ -107,13 +102,6 @@ export function Sidebar() {
                   <span className="flex-1 text-[0.84rem] font-semibold">
                     {item.label}
                   </span>
-                  <span
-                    className={`text-[0.56rem] font-bold uppercase tracking-[0.13em] ${
-                      isActive ? 'text-pine-300' : 'text-pine-200/25'
-                    }`}
-                  >
-                    {item.english}
-                  </span>
                 </>
               )}
             </NavLink>
@@ -127,11 +115,10 @@ export function Sidebar() {
             </span>
             <div>
               <p className="font-display text-[0.97rem] leading-snug text-cream">
-                Dili ka kailangan mag-inusara.
+                You don’t have to carry this alone.
               </p>
               <p className="mt-1 text-[0.66rem] leading-relaxed text-pine-200/60">
-                You don’t have to be alone in this. Crisis support is one tap
-                away.
+                Crisis support is one tap away, any hour of the day.
               </p>
             </div>
           </div>
@@ -157,7 +144,7 @@ export function Sidebar() {
           </span>
           <span className="min-w-0 flex-1">
             <span className="block truncate text-xs font-semibold">
-              {profile.name.trim() || 'Bag-ong higala'}
+              {profile.name.trim() || 'New friend'}
             </span>
             {isAdmin ? (
               <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-pine-300/15 px-2 py-0.5 text-[0.55rem] font-bold uppercase tracking-[0.12em] text-pine-200">

@@ -6,23 +6,19 @@ const DELAYS = ['delay-1', 'delay-2', 'delay-3', 'delay-4'];
 const SUGGESTIONS = [
   {
     icon: HeartHandshake,
-    text: 'Naguol ko pero di ko kahibalo ngano.',
-    english: 'I’m sad and I don’t know why.',
+    text: 'I’m sad and I don’t know why.',
   },
   {
     icon: Flame,
-    text: 'Gisapot ko sa akong kauban. Gusto nako siya awayon.',
-    english: 'I’m furious at someone. I want to fight them.',
+    text: 'I’m furious at someone. I want to fight them.',
   },
   {
     icon: Brain,
-    text: 'Nerbiyos ko sa exam ug wala pa ko ka-study.',
-    english: 'I’m anxious about an exam and haven’t studied.',
+    text: 'I’m anxious about an exam and haven’t studied.',
   },
   {
     icon: Wind,
-    text: 'Gikapoy na ko sa tanan. Gusto ko og pahulay.',
-    english: 'I’m tired of everything. I need rest.',
+    text: 'I’m tired of everything. I need rest.',
   },
 ];
 
@@ -44,11 +40,10 @@ export function ChatEmptyState({
         Higala is here · 24/7
       </p>
       <h2 className="text-balance font-display text-[1.8rem] font-semibold leading-[1.1] text-pine-950 sm:text-4xl">
-        Unsa ang tinuod nimong gibati karon?
+        What are you actually feeling right now?
       </h2>
       <p className="mt-2 max-w-md text-balance text-sm leading-relaxed text-muted">
-        What are you actually feeling right now? I won’t say it’s okay if it
-        isn’t. We’ll start where you are.
+        I won’t say it’s okay if it isn’t. We’ll start right where you are.
       </p>
 
       <div className="mt-6 grid w-full max-w-xl gap-2 text-left sm:grid-cols-2">
@@ -66,9 +61,6 @@ export function ChatEmptyState({
               <span className="block text-[0.78rem] font-semibold leading-snug text-pine-950">
                 {suggestion.text}
               </span>
-              <span className="mt-0.5 block text-[0.64rem] leading-snug text-muted/70">
-                {suggestion.english}
-              </span>
             </span>
             <ArrowUpRight className="mt-1 h-3.5 w-3.5 shrink-0 text-pine-400 opacity-0 transition group-hover:opacity-100" aria-hidden="true" />
           </button>
@@ -76,8 +68,8 @@ export function ChatEmptyState({
       </div>
 
       <p className="mt-5 max-w-sm text-[0.68rem] leading-relaxed text-muted/60">
-        Pwede ka mag-Bisaya, Tagalog, o English. Bisan mag-code-switch, okay ra.
-        No judgement—but also no flattery.
+        Write in English, Bisaya, Tagalog, or mix them—whatever feels natural.
+        No judgement, and no flattery.
       </p>
     </div>
   );

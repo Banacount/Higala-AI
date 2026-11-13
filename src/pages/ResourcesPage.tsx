@@ -47,8 +47,8 @@ export function ResourcesPage() {
         eyebrow="Get help"
         title={
           <>
-            Tabang nga tinuod,{' '}
-            <span className="italic text-pine-600">dili lang tambag.</span>
+            Real help,{' '}
+            <span className="italic text-pine-600">not just advice.</span>
           </>
         }
         subtitle="If you are in danger, call now. If you are not sure, read on. Asking for help early is not weakness—it is strategy."
@@ -126,7 +126,7 @@ export function ResourcesPage() {
               Philippines crisis lines
             </p>
             <h2 className="mt-1 font-display text-[1.55rem] font-semibold leading-tight text-pine-950">
-              Makasulti ka. Adunay maminaw.
+              You can speak up. Someone will listen.
             </h2>
           </div>
           <span className="inline-flex items-center gap-1 text-[0.62rem] font-bold uppercase tracking-[0.11em] text-pine-600">
