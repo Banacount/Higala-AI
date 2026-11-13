@@ -52,6 +52,12 @@ export const LANGUAGE_OPTIONS: Array<{
   description: string;
 }> = [
   {
+    value: 'en',
+    label: 'English',
+    short: 'Eng',
+    description: 'English',
+  },
+  {
     value: 'ceb',
     label: 'Bisaya',
     short: 'Bis',
@@ -63,58 +69,52 @@ export const LANGUAGE_OPTIONS: Array<{
     short: 'Tag',
     description: 'Filipino / Tagalog',
   },
-  {
-    value: 'en',
-    label: 'English',
-    short: 'Eng',
-    description: 'English',
-  },
 ];
 
 export const MOOD_LEVELS = {
   1: {
-    label: 'Gihilakan',
+    label: 'Rough',
     sublabel: 'Very low',
     color: '#6F8B7C',
     soft: '#E5ECE8',
   },
   2: {
-    label: 'Naguol',
-    sublabel: 'Low',
+    label: 'Low',
+    sublabel: 'Down',
     color: '#6EA488',
     soft: '#E1F0E7',
   },
   3: {
-    label: 'Okay-okay',
+    label: 'Okay',
     sublabel: 'Neutral',
     color: '#9AC3A9',
     soft: '#EBF5EF',
   },
   4: {
-    label: 'Maayo',
-    sublabel: 'Good',
+    label: 'Good',
+    sublabel: 'Steady',
     color: '#2FA476',
     soft: '#DDF4E9',
   },
   5: {
-    label: 'Nalipay',
-    sublabel: 'Great',
+    label: 'Great',
+    sublabel: 'Bright',
     color: '#0C7A56',
     soft: '#D3F0E3',
   },
 } as const;
 
 export const MOOD_TAGS = [
-  'Pamilya',
-  'Trabaho',
-  'Eskwela',
-  'Kwarta',
-  'Relasyon',
-  'Lawas',
-  'Katulog',
-  'Kaon',
-  'Barkada',
-  'Walay klaro',
+  'Family',
+  'Work',
+  'School',
+  'Money',
+  'Relationships',
+  'Health',
+  'Sleep',
+  'Eating',
+  'Friends',
+  'Unclear',
 ];
 
 export const DAILY_PROMPTS: Array<{ ceb: string; en: string }> = [
@@ -159,23 +159,23 @@ export const TOOL_DETAILS: Record<
   }
 > = {
   breathing: {
-    title: 'Ginhawa',
-    english: 'Box breathing',
+    title: 'Box breathing',
+    english: 'Breath reset',
     duration: '2 min',
     description:
       'Slow the body down first. Four counts in, hold, four counts out, hold.',
     tone: 'pine',
   },
   grounding: {
-    title: 'Balik sa Karon',
-    english: '5-4-3-2-1 grounding',
+    title: '5-4-3-2-1 grounding',
+    english: 'Back to the present',
     duration: '3 min',
     description:
       'When your mind is spinning, come back through your five senses.',
     tone: 'mint',
   },
   'thought-record': {
-    title: 'Hunahuna Check',
+    title: 'Thought check',
     english: 'Thought record',
     duration: '6 min',
     description:
@@ -183,7 +183,7 @@ export const TOOL_DETAILS: Record<
     tone: 'sun',
   },
   'anger-pause': {
-    title: 'Hunong sa 90',
+    title: '90-second pause',
     english: 'Anger pause',
     duration: '2 min',
     description:
@@ -191,16 +191,16 @@ export const TOOL_DETAILS: Record<
     tone: 'clay',
   },
   'safety-plan': {
-    title: 'Plano sa Kaluwasan',
-    english: 'Safety plan',
+    title: 'Safety plan',
+    english: 'Crisis prep',
     duration: '10 min',
     description:
       'A simple plan for the moments when you cannot think clearly.',
     tone: 'deep',
   },
   'mood-check': {
-    title: 'Gibati',
-    english: 'Mood check-in',
+    title: 'Mood check-in',
+    english: 'Daily check',
     duration: '1 min',
     description: 'Name what is here. Honesty is the first step.',
     tone: 'mint',
@@ -210,36 +210,36 @@ export const TOOL_DETAILS: Record<
 export const GROUNDING_STEPS = [
   {
     count: 5,
-    title: '5 ka butang nga makita nimo',
-    english: 'Five things you can see',
+    title: 'Five things you can see',
+    english: 'Sight',
     hint: 'Look around slowly. Name them—even the boring ones.',
     placeholder: 'e.g. blue mug, cracked wall, yellow jeepney',
   },
   {
     count: 4,
-    title: '4 ka butang nga matandog nimo',
-    english: 'Four things you can touch',
+    title: 'Four things you can touch',
+    english: 'Touch',
     hint: 'Press your feet into the floor. Notice texture and temperature.',
     placeholder: 'e.g. cold chair, soft shirt, rough table',
   },
   {
     count: 3,
-    title: '3 ka tingog nga madungog nimo',
-    english: 'Three things you can hear',
+    title: 'Three things you can hear',
+    english: 'Sound',
     hint: 'Near or far. Do not judge them; just notice.',
-    placeholder: 'e.g. fan hum, distant tricycle, my breathing',
+    placeholder: 'e.g. fan hum, distant traffic, my breathing',
   },
   {
     count: 2,
-    title: '2 ka baho nga masimhot nimo',
-    english: 'Two things you can smell',
+    title: 'Two things you can smell',
+    english: 'Smell',
     hint: 'If you cannot smell anything, name two smells you remember.',
     placeholder: 'e.g. rain on concrete, coffee',
   },
   {
     count: 1,
-    title: '1 ka lami nga matilawan nimo',
-    english: 'One thing you can taste',
+    title: 'One thing you can taste',
+    english: 'Taste',
     hint: 'Take a sip of water. Notice the taste, or the absence of one.',
     placeholder: 'e.g. mint, water, nothing',
   },
@@ -250,60 +250,60 @@ export const DISTORTIONS = [
     id: 'all-or-nothing',
     ceb: 'Tanang o wala',
     en: 'All-or-nothing thinking',
-    example: '“Kung dili perfect, wala na lang.”',
+    example: '“If it’s not perfect, it’s worthless.”',
   },
   {
     id: 'catastrophizing',
     ceb: 'Pinakagrabe nga mahitabo',
     en: 'Catastrophizing',
-    example: '“Kung masayop ko, tapos na ang tanan.”',
+    example: '“If I make one mistake, everything is ruined.”',
   },
   {
     id: 'mind-reading',
     ceb: 'Pagbasa sa hunahuna',
     en: 'Mind reading',
-    example: '“Gikasab-an ko niya sa iyang hunahuna.”',
+    example: '“They’re definitely angry with me.”',
   },
   {
     id: 'shoulds',
     ceb: 'Angay / Dapat',
     en: 'Should statements',
-    example: '“Angay gyud ko nga kamao na niini.”',
+    example: '“I should have figured this out by now.”',
   },
   {
     id: 'labeling',
     ceb: 'Paglabel',
     en: 'Labeling',
-    example: '“Tapulan gyud ko nga tawo.”',
+    example: '“I’m just a lazy person.”',
   },
   {
     id: 'overgeneralizing',
     ceb: 'Kanunay / Wala gyud',
     en: 'Overgeneralizing',
-    example: '“Kanunay na lang ko masayop.”',
+    example: '“I always mess things up.”',
   },
   {
     id: 'discounting',
     ceb: 'Pagbalewala sa maayo',
     en: 'Discounting the positive',
-    example: '“Swerti lang ’to, dili tungod sa akong paningkamot.”',
+    example: '“That was just luck, not my effort.”',
   },
   {
     id: 'personalization',
     ceb: 'Pagbasol sa kaugalingon',
     en: 'Personalization',
-    example: '“Tungod nako nangasuko siya.”',
+    example: '“They’re upset because of me.”',
   },
 ] as const;
 
 export const SUPPORT_TIPS = [
   {
     title: 'Listen before fixing',
-    body: '“Naminaw ko. Ayaw sa og sulbad—istorya lang sa.” Presence is often the first intervention.',
+    body: '“I’m listening. No need to fix anything yet—just talk.” Presence is often the first intervention.',
   },
   {
     title: 'Ask directly',
-    body: 'Asking “Nagahunahuna ka ba og paghikog?” does not plant the idea. It opens a door and can save a life.',
+    body: 'Asking “Are you thinking about suicide?” does not plant the idea. It opens a door and can save a life.',
   },
   {
     title: 'Stay with them',

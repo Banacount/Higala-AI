@@ -54,8 +54,8 @@ function chatApiPlugin(env: Record<string, string>): Plugin {
     try {
       const body = await readChatBody(req);
       const result = await handleChat(body, {
-        apiKey: env.GEMINI_API_KEY,
-        model: env.GEMINI_MODEL,
+        apiKey: env.GEMINI_API_KEY || process.env.GEMINI_API_KEY,
+        model: env.GEMINI_MODEL || process.env.GEMINI_MODEL,
       });
 
       res.statusCode = 200;
@@ -187,12 +187,13 @@ export default defineConfig(({ mode }) => {
       },
     },
     server: {
-      port: 5173,
-      host: '127.0.0.1',
+      port: 3000,
+      host: '0.0.0.0',
+      allowedHosts: true,
     },
     preview: {
-      port: 4173,
-      host: '127.0.0.1',
+      port: 3000,
+      host: '0.0.0.0',
     },
   };
 });

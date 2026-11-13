@@ -208,7 +208,7 @@ export function CommunityComposePage() {
   return (
     <PageShell>
       <PageHeader
-        eyebrow="Komunidad · Community"
+        eyebrow="Community"
         title="Share your thoughts"
         subtitle="You do not need a perfect story or the right words. Say it the way it sits in your chest."
         action={
@@ -281,7 +281,7 @@ export function CommunityComposePage() {
                     maxLength={COMMUNITY_LIMITS.content}
                     rows={9}
                     required
-                    placeholder="Pwede ka magsulat sa Bisaya, Filipino, English, o halo-halo. Take your time."
+                    placeholder="You can write in English, Bisaya, Filipino, or a mix. Take your time."
                     className="mt-2 w-full resize-y rounded-2xl border border-pine-900/12 bg-cream/50 px-4 py-3 text-sm leading-relaxed text-ink outline-none transition placeholder:text-muted/65 focus:border-pine-600/50 focus:ring-2 focus:ring-pine-200"
                   />
                 </label>

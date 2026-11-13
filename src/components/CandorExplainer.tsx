@@ -34,14 +34,14 @@ export function CandorExplainer({
       onClose={onClose}
       title="Why Higala won’t just agree with you"
       eyebrow="The Higala way"
-      description="Higalaay is not flattery. It is the kind of friendship that tells you the truth because it wants you to be free."
+      description="True friendship is not flattery. It is the kind of honesty that tells you the truth because it wants you to be free."
       size="lg"
     >
       <div className="space-y-5">
         <div className="rounded-[1.5rem] bg-pine-900 p-5 text-cream sm:p-6">
           <p className="font-display text-xl leading-snug sm:text-2xl">
-            “A yes-man makes you feel heard for a moment. A higala helps you
-            tell the truth for longer.”
+            “A yes-man makes you feel heard for a moment. A real friend helps
+            you tell the truth for longer.”
           </p>
           <p className="mt-3 text-xs leading-relaxed text-pine-200/80">
             Radical candour is not cruelty. It is honesty with warmth, and

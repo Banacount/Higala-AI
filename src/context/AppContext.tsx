@@ -26,7 +26,7 @@ export const STORAGE_KEYS = {
 
 const EMPTY_PROFILE: Profile = {
   name: '',
-  language: 'ceb',
+  language: 'en',
 };
 
 const EMPTY_SAFETY_PLAN: SafetyPlan = {

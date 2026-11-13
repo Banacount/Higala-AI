@@ -55,7 +55,7 @@ export function ChatComposer({
           }
         }}
         rows={1}
-        placeholder="Isulti ang tinuod… even if it’s messy."
+        placeholder="Say what’s actually going on… even if it’s messy."
         className="max-h-[168px] min-h-[48px] w-full resize-none bg-transparent px-3 py-2.5 text-[0.94rem] leading-relaxed text-ink outline-none placeholder:text-muted/55"
       />
       <div className="flex items-center justify-between gap-2 px-1 pb-0.5">

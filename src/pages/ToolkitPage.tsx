@@ -72,8 +72,8 @@ export function ToolkitPage() {
         eyebrow="Structured support"
         title={
           <>
-            Mga himan sa{' '}
-            <span className="italic text-pine-600">lisod nga gutlo.</span>
+            Tools for{' '}
+            <span className="italic text-pine-600">hard moments.</span>
           </>
         }
         subtitle="Small, concrete tools for when your head is loud. No toxic positivity—just a next step you can actually take."

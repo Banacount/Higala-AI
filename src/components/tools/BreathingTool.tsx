@@ -4,29 +4,29 @@ import { Button } from '@/components/ui/Button';
 
 const PHASES = [
   {
-    label: 'Ginhawa sa',
-    english: 'Breathe in',
+    label: 'Breathe in',
+    english: 'Inhale · 4s',
     seconds: 4,
     scale: 1.12,
     color: 'from-pine-200 to-pine-400',
   },
   {
-    label: 'Hupta',
-    english: 'Hold',
+    label: 'Hold',
+    english: 'Hold · 4s',
     seconds: 4,
     scale: 1.12,
     color: 'from-pine-300 to-pine-500',
   },
   {
-    label: 'Pagawasa',
-    english: 'Breathe out',
+    label: 'Breathe out',
+    english: 'Exhale · 4s',
     seconds: 4,
     scale: 0.84,
     color: 'from-pine-100 to-pine-300',
   },
   {
-    label: 'Pahulay',
-    english: 'Rest',
+    label: 'Rest',
+    english: 'Hold · 4s',
     seconds: 4,
     scale: 0.84,
     color: 'from-pine-100 to-pine-200',
@@ -118,7 +118,7 @@ export function BreathingTool() {
             {finished ? '✓' : session.remaining}
           </p>
           <p className="mt-1 text-sm font-semibold text-pine-900/70">
-            {finished ? 'Nahuman na' : phase.label}
+            {finished ? 'All done' : phase.label}
           </p>
         </div>
       </div>
@@ -142,7 +142,7 @@ export function BreathingTool() {
       {finished ? (
         <div className="rounded-2xl border border-pine-200 bg-pine-50 p-4 text-center">
           <p className="font-display text-lg font-semibold text-pine-950">
-            Nibalik ka sa imong lawas.
+            You’re back in your body.
           </p>
           <p className="mt-1 text-xs leading-relaxed text-muted">
             Four rounds done. Notice one thing that feels different—even

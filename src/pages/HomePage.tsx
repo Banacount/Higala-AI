@@ -18,7 +18,7 @@ export function HomePage() {
     <PageShell>
       <div className="mb-3 flex items-center justify-between gap-3">
         <p className="text-[0.6rem] font-extrabold uppercase tracking-[0.16em] text-pine-600/75">
-          Panimalay · {formatLongDate()}
+          Home · {formatLongDate()}
         </p>
         <button
           type="button"

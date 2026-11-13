@@ -44,12 +44,12 @@ export function Welcome() {
         <div>
           <span className="inline-flex items-center gap-1.5 rounded-full border border-pine-900/8 bg-white/70 px-2.5 py-1 text-[0.58rem] font-extrabold uppercase tracking-[0.14em] text-pine-700">
             <span className="h-1.5 w-1.5 rounded-full bg-pine-500" />
-            24/7 nga higala
+            24/7 companion
           </span>
 
           <h1 className="mt-4 text-balance font-display text-[2.2rem] font-semibold leading-[1.05] tracking-[-0.03em] text-pine-950 sm:text-[2.8rem] lg:text-[3rem]">
-            Kumusta ka,{' '}
-            <span className="italic text-pine-700">{name || 'bai'}</span>?
+            How are you doing,{' '}
+            <span className="italic text-pine-700">{name || 'friend'}</span>?
           </h1>
 
           <p className="mt-3 max-w-md text-pretty text-sm leading-relaxed text-muted sm:text-[0.92rem]">
@@ -65,7 +65,7 @@ export function Welcome() {
                 className: 'justify-between sm:justify-center',
               })}
             >
-              Sugdi ang istorya
+              Start talking
               <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </Link>
             <Link
@@ -73,7 +73,7 @@ export function Welcome() {
               className={buttonStyles({ variant: 'secondary', size: 'md' })}
             >
               <Wind className="h-4 w-4" aria-hidden="true" />
-              2-minutong ginhawa
+              2-minute breathing
             </Link>
           </div>
 
@@ -84,7 +84,7 @@ export function Welcome() {
             </span>
             <span className="inline-flex items-center gap-1.5">
               <Globe2 className="h-3.5 w-3.5 text-pine-500" aria-hidden="true" />
-              Bisaya · Tagalog · English
+              English · Bisaya · Tagalog
             </span>
           </div>
         </div>

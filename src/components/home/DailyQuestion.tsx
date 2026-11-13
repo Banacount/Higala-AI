@@ -6,7 +6,7 @@ import { buttonStyles } from '@/components/ui/Button';
 
 export function DailyQuestion() {
   const prompt = DAILY_PROMPTS[dayOfYear() % DAILY_PROMPTS.length];
-  const chatHref = `/chat?prompt=${encodeURIComponent(prompt.ceb)}`;
+  const chatHref = `/chat?prompt=${encodeURIComponent(prompt.en)}`;
 
   return (
     <section className="relative flex h-full flex-col overflow-hidden rounded-[1.55rem] border border-sun/15 bg-sun-soft/45 p-5 sm:p-6">
@@ -19,10 +19,7 @@ export function DailyQuestion() {
 
       <blockquote className="relative mt-3 flex-1">
         <p className="text-balance font-display text-[1.35rem] font-medium leading-[1.28] text-[#4e3810] sm:text-[1.45rem]">
-          “{prompt.ceb}”
-        </p>
-        <p className="mt-2 text-[0.7rem] leading-relaxed text-[#72511a]/60">
-          {prompt.en}
+          “{prompt.en}”
         </p>
       </blockquote>
 
@@ -34,7 +31,7 @@ export function DailyQuestion() {
             className: 'justify-between sm:justify-center',
           })}
         >
-          Istoryaha si Higala
+          Talk to Higala
           <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
         </Link>
         <Link
@@ -42,7 +39,7 @@ export function DailyQuestion() {
           className="inline-flex items-center justify-center gap-1.5 rounded-full px-3 py-2 text-xs font-bold text-[#72511a]/80 transition hover:bg-white/60 hover:text-[#72511a]"
         >
           <Brain className="h-3.5 w-3.5" aria-hidden="true" />
-          Hunahuna check
+          Thought check
         </Link>
       </div>
     </section>
