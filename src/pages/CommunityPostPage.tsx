@@ -16,6 +16,7 @@ import { CommunityAuthGate } from '@/components/community/CommunityAuthGate';
 import { CrisisSupportNote } from '@/components/community/CrisisSupportNote';
 import { PostSkeleton } from '@/components/community/PostSkeleton';
 import { ReportDialog } from '@/components/community/ReportDialog';
+import { SupportiveReactions } from '@/components/community/SupportiveReactions';
 import { CommunityRepliesSection } from '@/components/community/CommunityRepliesSection';
 import { useAuth } from '@/context/AuthContext';
 import { useCommunityPost } from '@/hooks/useCommunityPost';
@@ -29,6 +30,7 @@ interface PostLocationState {
   supportSuggested?: boolean;
 }
 
+/** Renders one community post with its reactions, actions, and replies. */
 export function CommunityPostPage() {
   const { postId } = useParams<{ postId: string }>();
   const location = useLocation();
@@ -140,7 +142,7 @@ export function CommunityPostPage() {
                   <div className="flex flex-wrap items-center gap-2">
                     <CategoryChip category={post.category} />
                     {post.isMine ? (
-                      <span className="text-[0.6rem] font-bold  uppercase text-pine-600">
+                      <span className="text-[0.6rem] font-bold uppercase tracking-[0.14em] text-pine-600">
                         Your post
                       </span>
                     ) : null}
@@ -169,7 +171,30 @@ export function CommunityPostPage() {
                   {post.content}
                 </p>
 
-                <div className="mt-6 flex flex-wrap items-center gap-2 border-t border-pine-900/8 pt-4">
+                {/* Supportive reactions */}
+                <div className="mt-6 border-t border-pine-900/8 pt-4">
+                  <p className="mb-2.5 text-[0.62rem] font-extrabold uppercase tracking-[0.14em] text-pine-700">
+                    Supportive reactions
+                  </p>
+                  <SupportiveReactions
+                    postId={post.id}
+                    counts={post.reactionCounts}
+                    myReactions={post.myReactions ?? []}
+                    onReactionChange={(nextCounts, nextMyReactions) => {
+                      setPost((prev) => {
+                        // Ignore responses for a post the user has navigated away from.
+                        if (!prev || prev.id !== post.id) return prev;
+                        return {
+                          ...prev,
+                          reactionCounts: nextCounts,
+                          myReactions: nextMyReactions,
+                        };
+                      });
+                    }}
+                  />
+                </div>
+
+                <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-pine-900/8 pt-4">
                   <span className="mr-auto flex items-center gap-1.5 text-[0.68rem] font-semibold text-muted">
                     <MessageCircle
                       className="h-3.5 w-3.5"

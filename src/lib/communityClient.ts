@@ -4,8 +4,11 @@ import type {
   CommunityModerationQueue,
   CommunityPost,
   CommunityPostList,
+  CommunityReaction,
   CommunityReply,
+  CommunityReplyList,
   CommunityReportReason,
+  ReplyEmoji,
 } from '@/shared/community';
 
 export class CommunityApiError extends Error {
@@ -130,7 +133,7 @@ export function createReply(
     content: string;
   },
   token: string,
-): Promise<{ reply: CommunityReply; supportSuggested?: boolean }> {
+): Promise<{ reply: CommunityReply; supportSuggested?: boolean; pendingReview?: boolean }> {
   return communityPost(
     {
       action: 'create-reply',
@@ -148,16 +151,77 @@ export function deleteReply(
   return communityPost({ action: 'delete-reply', replyId }, token);
 }
 
+/** Sends a post-reaction toggle request and returns the server's fresh state. */
+export function toggleReaction(
+  input: {
+    postId: string;
+    reaction: CommunityReaction;
+  },
+  token: string,
+): Promise<{
+  ok: boolean;
+  reacted: boolean;
+  reaction: CommunityReaction;
+  reactionCounts: Record<CommunityReaction, number>;
+  myReactions: CommunityReaction[];
+}> {
+  return communityPost(
+    {
+      action: 'toggle-reaction',
+      postId: input.postId,
+      reaction: input.reaction,
+    },
+    token,
+  );
+}
+
+/** Sends a reply-emoji toggle request and returns the server's fresh state. */
+export function toggleReplyReaction(
+  input: {
+    postId: string;
+    replyId: string;
+    emoji: ReplyEmoji;
+  },
+  token: string,
+): Promise<{
+  ok: boolean;
+  reacted: boolean;
+  emoji: ReplyEmoji;
+  reactionCounts: Record<string, number>;
+  myReactions: string[];
+}> {
+  return communityPost(
+    {
+      action: 'toggle-reply-reaction',
+      postId: input.postId,
+      replyId: input.replyId,
+      emoji: input.emoji,
+    },
+    token,
+  );
+}
+
+/** Fetches one page of replies, accepting the legacy array response shape. */
 export async function getCommunityReplies(
   postId: string,
   token: string,
+  options?: { cursor?: string | null; limit?: number },
   signal?: AbortSignal,
-): Promise<CommunityReply[]> {
+): Promise<CommunityReplyList> {
   const result = await communityGet<
-    CommunityReply[] | { replies: CommunityReply[] }
-  >('replies', { postId }, token, signal);
-  if (Array.isArray(result)) return result;
-  return result.replies ?? [];
+    CommunityReply[] | { replies: CommunityReply[]; nextCursor?: string | null }
+  >(
+    'replies',
+    {
+      postId,
+      cursor: options?.cursor ?? undefined,
+      limit: options?.limit ? String(options.limit) : undefined,
+    },
+    token,
+    signal,
+  );
+  if (Array.isArray(result)) return { replies: result, nextCursor: null };
+  return { replies: result.replies ?? [], nextCursor: result.nextCursor ?? null };
 }
 
 export function reportPost(
@@ -179,10 +243,27 @@ export function reportPost(
   );
 }
 
+/** Records the current user's acceptance of the community guidelines. */
 export function acceptGuidelines(
   token: string,
 ): Promise<{ me: CommunityMe }> {
   return communityPost({ action: 'accept-guidelines' }, token);
+}
+
+/** Sends a moderation action for a reply. */
+export function moderateReply(
+  input: { postId: string; replyId: string; action: CommunityModerationAction },
+  token: string,
+): Promise<{ ok: true }> {
+  return communityPost(
+    {
+      action: 'moderate-reply',
+      postId: input.postId,
+      replyId: input.replyId,
+      moderationAction: input.action,
+    },
+    token,
+  );
 }
 
 export function moderatePost(
@@ -199,17 +280,28 @@ export function moderatePost(
   );
 }
 
+/** Requests erasure of the current user's community content. */
 export function deleteMyCommunityData(
   token: string,
 ): Promise<{ deletedPosts: number; deletedReports: number; deletedReplies?: number }> {
   return communityPost({ action: 'delete-my-data' }, token);
 }
 
+/** Fetches the moderator queue, optionally paging flagged replies by cursor. */
 export function getModerationQueue(
   token: string,
+  options?: { repliesCursor?: string | null; repliesLimit?: number },
   signal?: AbortSignal,
 ): Promise<CommunityModerationQueue> {
-  return communityGet('moderation', {}, token, signal);
+  return communityGet(
+    'moderation',
+    {
+      repliesCursor: options?.repliesCursor ?? undefined,
+      repliesLimit: options?.repliesLimit ? String(options.repliesLimit) : undefined,
+    },
+    token,
+    signal,
+  );
 }
 
 export function getMyCommunityState(
