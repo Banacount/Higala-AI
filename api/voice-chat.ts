@@ -88,6 +88,7 @@ export default async function handler(
     const result = await handleVoiceChat(form, {
       apiKey: process.env.GEMINI_API_KEY,
       model: process.env.GEMINI_MODEL,
+      transcribeModel: process.env.GEMINI_TRANSCRIBE_MODEL,
     });
     sendJson(res, 200, result);
   } catch (error) {

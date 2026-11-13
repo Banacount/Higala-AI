@@ -218,6 +218,8 @@ async function generateOnce(
       // Gemini 3.5 supports thinking levels; minimal keeps chat replies fast
       // while leaving room for the structured JSON output.
       thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL },
+      // Chat and voice transcripts are sensitive; opt out of request logging.
+      store: false,
       responseMimeType: 'application/json',
       responseSchema: {
         type: Type.OBJECT,

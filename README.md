@@ -69,11 +69,14 @@ Voice messages still need a Gemini key because transcription requires the live m
    ```dotenv
    GEMINI_API_KEY=your-key-here
    GEMINI_MODEL=gemini-3.5-flash
+   GEMINI_TRANSCRIBE_MODEL=gemini-3.5-transcribe
    ```
 
 3. Restart `npm run dev`.
 
 `GEMINI_MODEL` is optional. The default is `gemini-3.5-flash`. If the configured model is rate-limited or unavailable, the server retries, then falls back to `gemini-3.5-flash-lite`. If every live attempt fails, the app tells the user the live service is unavailable and labels any offline reply as `Demo` instead of quietly swapping in a scripted answer.
+
+`GEMINI_TRANSCRIBE_MODEL` is optional. The default is the dedicated `gemini-3.5-transcribe` model, which is faster than a general chat model for speech and supports Cebuano (`ceb`) and Filipino (`fil-PH`) directly. If it is unavailable, the server falls back to `gemini-3.5-flash` so voice messages keep working.
 
 ---
 
@@ -151,18 +154,29 @@ Browser
 ### Voice message flow
 
 ```text
-Browser (MediaRecorder)
+Browser (MediaRecorder, 48 kbps speech)
   └─ POST /api/voice-chat   multipart: audio + history + language + risk
        └─ Vercel Function `api/voice-chat.ts` (Vite middleware locally)
             ├─ validate MIME from magic bytes, size, declared duration
-            ├─ Gemini transcribes the audio in the spoken language
+            ├─ gemini-3.5-transcribe (Cebuano/Filipino/English hints)
             ├─ replay the transcript through handleChat()
             └─ return { transcript, message, challenge, tool, risk, demo? }
 ```
 
+The transcription call uses the dedicated `gemini-3.5-transcribe` model with
+`ceb`, `fil-PH`, and `en-US` hints. The hints are a prior rather than a hard
+constraint, so Bisaya/Tagalog code-switching is preserved. If the dedicated
+model is unavailable, the server falls back to `gemini-3.5-flash`.
+
+Both the transcription request and the chat request set `store: false`, so
+Google does not retain the audio, transcript, or reply as interaction/log
+records.
+
 Audio is kept in memory only and played back from a session-scoped `blob:`
 URL. The transcript is stored in the existing chat history (localStorage); the
 audio itself is never written to Firestore, localStorage, or a storage bucket.
+The reply follows the app's selected language, while the transcript preserves
+the language actually spoken.
 
 The server never trusts the client's risk assessment alone: it screens the last user message again and takes the maximum of the client's and server's risk level. The model's own risk output is also merged conservatively.
 
@@ -373,6 +387,8 @@ automatically because they live in the root `api/` directory.
 2. In **Project Settings → Environment Variables**, add:
    - `GEMINI_API_KEY` — your Gemini key. **Do not** prefix it with `VITE_`.
    - `GEMINI_MODEL` — optional; defaults to `gemini-3.5-flash`.
+   - `GEMINI_TRANSCRIBE_MODEL` — optional; defaults to
+     `gemini-3.5-transcribe`.
    - `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`,
      `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_APP_ID` — the public Firebase
      client config for Anonymous Auth.

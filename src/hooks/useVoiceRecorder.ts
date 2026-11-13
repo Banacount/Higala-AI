@@ -4,6 +4,12 @@ import { MAX_VOICE_AUDIO_BYTES } from '@/shared/types';
 export const MAX_VOICE_RECORDING_MS = 120_000;
 
 const MIN_VOICE_BYTES = 512;
+/**
+ * Speech is intelligible well below MediaRecorder's usual default bitrate. A
+ * smaller upload reaches the transcription service sooner without a
+ * meaningful accuracy loss for one- to two-minute messages.
+ */
+const VOICE_BITS_PER_SECOND = 48_000;
 const MIME_CANDIDATES = [
   'audio/webm;codecs=opus',
   'audio/webm',
@@ -40,6 +46,25 @@ function preferredMimeType(): string | undefined {
     return undefined;
   }
   return MIME_CANDIDATES.find((type) => MediaRecorder.isTypeSupported(type));
+}
+
+function createRecorder(
+  stream: MediaStream,
+  mimeType: string | undefined,
+): MediaRecorder {
+  const options: MediaRecorderOptions = {
+    audioBitsPerSecond: VOICE_BITS_PER_SECOND,
+  };
+  if (mimeType) options.mimeType = mimeType;
+
+  try {
+    return new MediaRecorder(stream, options);
+  } catch {
+    // Some browsers reject an explicit bitrate; fall back to their default.
+    return mimeType
+      ? new MediaRecorder(stream, { mimeType })
+      : new MediaRecorder(stream);
+  }
 }
 
 function mediaErrorMessage(error: unknown): string {
@@ -128,9 +153,7 @@ export function useVoiceRecorder() {
 
     try {
       const mimeType = preferredMimeType();
-      const recorder = mimeType
-        ? new MediaRecorder(stream, { mimeType })
-        : new MediaRecorder(stream);
+      const recorder = createRecorder(stream, mimeType);
 
       chunksRef.current = [];
       startedAtRef.current = Date.now();
