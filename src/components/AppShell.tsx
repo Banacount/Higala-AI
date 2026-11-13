@@ -7,11 +7,13 @@ import {
   LifeBuoy,
   MessageCircle,
   Settings2,
+  ShieldCheck,
   Sparkles,
   Sprout,
   Users,
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
+import { useAdminStatus } from '@/context/AdminStatusContext';
 import { Wordmark } from '@/components/BrandMark';
 import { CrisisModal } from '@/components/CrisisModal';
 import { initials } from '@/lib/utils';
@@ -58,6 +60,7 @@ const NAV_ITEMS = [
 
 export function Sidebar() {
   const { profile, openCrisis } = useApp();
+  const isAdmin = useAdminStatus();
   const language =
     LANGUAGE_OPTIONS.find((option) => option.value === profile.language) ??
     LANGUAGE_OPTIONS[0];
@@ -156,6 +159,12 @@ export function Sidebar() {
             <span className="block truncate text-xs font-semibold">
               {profile.name.trim() || 'Bag-ong higala'}
             </span>
+            {isAdmin ? (
+              <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-pine-300/15 px-2 py-0.5 text-[0.55rem] font-bold uppercase tracking-[0.12em] text-pine-200">
+                <ShieldCheck className="h-2.5 w-2.5" aria-hidden="true" />
+                Admin
+              </span>
+            ) : null}
             <span className="block text-[0.6rem] uppercase tracking-[0.12em] text-pine-200/40">
               {language.label} · Settings
             </span>

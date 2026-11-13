@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
+  AlertTriangle,
   ArrowLeft,
   Check,
   Eye,
@@ -28,6 +29,7 @@ import {
   type CommunityModerationAction,
   type CommunityModerationPost,
   type CommunityModerationQueue,
+  type CommunityPostModerationAction,
 } from '@/shared/community';
 import { formatRelativeTime } from '@/lib/utils';
 
@@ -206,7 +208,7 @@ export function CommunityModerationPage() {
 
   const act = async (
     postId: string,
-    action: CommunityModerationAction,
+    action: CommunityPostModerationAction,
   ) => {
     setBusyId(postId);
     setError(null);
@@ -223,6 +225,18 @@ export function CommunityModerationPage() {
     } finally {
       setBusyId(null);
     }
+  };
+
+  /** Confirms and permanently deletes a reported post via moderation. */
+  const requestDeletePost = (postId: string) => {
+    if (
+      !window.confirm(
+        'Delete this post? Its replies and reactions will be removed, and it cannot be restored.',
+      )
+    ) {
+      return;
+    }
+    void act(postId, 'delete');
   };
 
   const actReply = async (
@@ -392,12 +406,38 @@ export function CommunityModerationPage() {
                               No extra details were provided.
                             </p>
                           )}
-                          <Link
-                            to={`/community/${report.postId}`}
-                            className="mt-2 inline-block text-xs font-bold text-pine-800 underline underline-offset-2"
-                          >
-                            Open reported post
-                          </Link>
+                          <div className="mt-3 flex flex-wrap items-center gap-2">
+                            <Link
+                              to={`/community/${report.postId}`}
+                              className="mr-auto text-xs font-bold text-pine-800 underline underline-offset-2"
+                            >
+                              Open reported post
+                            </Link>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              disabled={busyId === report.postId}
+                              onClick={() => void act(report.postId, 'warn')}
+                            >
+                              <AlertTriangle
+                                className="h-3.5 w-3.5"
+                                aria-hidden="true"
+                              />
+                              Warn author
+                            </Button>
+                            <Button
+                              variant="danger"
+                              size="sm"
+                              disabled={busyId === report.postId}
+                              onClick={() => requestDeletePost(report.postId)}
+                            >
+                              <Trash2
+                                className="h-3.5 w-3.5"
+                                aria-hidden="true"
+                              />
+                              Delete post
+                            </Button>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -546,6 +586,9 @@ export function CommunityModerationPage() {
                                 {post.reportCount} reports
                               </Badge>
                             ) : null}
+                            {post.warnedAt ? (
+                              <Badge tone="sun">Warned</Badge>
+                            ) : null}
                             <span className="ml-auto text-[0.66rem] text-muted">
                               {formatRelativeTime(post.createdAt)}
                             </span>
@@ -597,6 +640,34 @@ export function CommunityModerationPage() {
                                 />
                                 Hide
                               </Button>
+                            ) : null}
+                            {post.status !== 'deleted' ? (
+                              <>
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  disabled={busyId === post.id}
+                                  onClick={() => void act(post.id, 'warn')}
+                                >
+                                  <AlertTriangle
+                                    className="h-3.5 w-3.5"
+                                    aria-hidden="true"
+                                  />
+                                  Warn
+                                </Button>
+                                <Button
+                                  variant="danger"
+                                  size="sm"
+                                  disabled={busyId === post.id}
+                                  onClick={() => requestDeletePost(post.id)}
+                                >
+                                  <Trash2
+                                    className="h-3.5 w-3.5"
+                                    aria-hidden="true"
+                                  />
+                                  Delete
+                                </Button>
+                              </>
                             ) : null}
                             {post.needsReview || post.reportCount > 0 ? (
                               <Button

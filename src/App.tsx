@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { Navigate, Outlet, Route, Routes } from 'react-router-dom';
 import { AppShell } from '@/components/AppShell';
+import { AdminStatusRoot } from '@/context/AdminStatusContext';
 import { HomePage } from '@/pages/HomePage';
 
 // Firebase Authentication is only needed by the community and settings
@@ -72,33 +73,35 @@ function PageLoader() {
 
 export function App() {
   return (
-    <Suspense fallback={<PageLoader />}>
-      <Routes>
-        <Route element={<AppShell />}>
-          <Route index element={<HomePage />} />
-          <Route path="chat" element={<ChatPage />} />
-          <Route
-            element={
-              <AuthProvider>
-                <Outlet />
-              </AuthProvider>
-            }
-          >
-            <Route path="community" element={<CommunityPage />} />
-            <Route path="community/new" element={<CommunityComposePage />} />
+    <AdminStatusRoot>
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          <Route element={<AppShell />}>
+            <Route index element={<HomePage />} />
+            <Route path="chat" element={<ChatPage />} />
             <Route
-              path="community/moderation"
-              element={<CommunityModerationPage />}
-            />
-            <Route path="community/:postId" element={<CommunityPostPage />} />
-            <Route path="settings" element={<SettingsPage />} />
+              element={
+                <AuthProvider>
+                  <Outlet />
+                </AuthProvider>
+              }
+            >
+              <Route path="community" element={<CommunityPage />} />
+              <Route path="community/new" element={<CommunityComposePage />} />
+              <Route
+                path="community/moderation"
+                element={<CommunityModerationPage />}
+              />
+              <Route path="community/:postId" element={<CommunityPostPage />} />
+              <Route path="settings" element={<SettingsPage />} />
+            </Route>
+            <Route path="toolkit" element={<ToolkitPage />} />
+            <Route path="mood" element={<MoodPage />} />
+            <Route path="resources" element={<ResourcesPage />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
-          <Route path="toolkit" element={<ToolkitPage />} />
-          <Route path="mood" element={<MoodPage />} />
-          <Route path="resources" element={<ResourcesPage />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Route>
-      </Routes>
-    </Suspense>
+        </Routes>
+      </Suspense>
+    </AdminStatusRoot>
   );
 }

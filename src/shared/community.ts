@@ -200,12 +200,33 @@ export const COMMUNITY_MODERATION_ACTIONS: CommunityModerationAction[] = [
   'dismiss-reports',
 ];
 
+/** Post moderation adds destructive and non-destructive report outcomes. */
+export type CommunityPostModerationAction =
+  | CommunityModerationAction
+  | 'delete'
+  | 'warn';
+
+export const COMMUNITY_POST_MODERATION_ACTIONS: CommunityPostModerationAction[] =
+  [...COMMUNITY_MODERATION_ACTIONS, 'delete', 'warn'];
+
 export function isCommunityModerationAction(
   value: unknown,
 ): value is CommunityModerationAction {
   return (
     typeof value === 'string' &&
     COMMUNITY_MODERATION_ACTIONS.includes(value as CommunityModerationAction)
+  );
+}
+
+/** Narrows an unknown value to a post moderation action, including warn/delete. */
+export function isCommunityPostModerationAction(
+  value: unknown,
+): value is CommunityPostModerationAction {
+  return (
+    typeof value === 'string' &&
+    COMMUNITY_POST_MODERATION_ACTIONS.includes(
+      value as CommunityPostModerationAction,
+    )
   );
 }
 
@@ -256,6 +277,7 @@ export interface CommunityModerationPost {
   riskLevel: RiskLevel;
   needsReview: boolean;
   reportCount: number;
+  warnedAt: number | null;
 }
 
 export interface CommunityModerationReport {

@@ -21,6 +21,7 @@ import {
   type CommunityModerationReport,
   type CommunityPost,
   type CommunityPostList,
+  type CommunityPostModerationAction,
   type CommunityPostStatus,
   type CommunityReaction,
   type CommunityReply,
@@ -65,6 +66,8 @@ interface CommunityPostDoc {
   riskLevel?: unknown;
   needsReview?: unknown;
   reportCount?: unknown;
+  warnedAt?: unknown;
+  warningCount?: unknown;
   replyCount?: unknown;
   reactionCounts?: unknown;
   cleanupPending?: unknown;
@@ -232,6 +235,7 @@ function toModerationPost(
     riskLevel: isRiskLevel(data.riskLevel) ? data.riskLevel : 'none',
     needsReview: data.needsReview === true,
     reportCount: readNumber(data.reportCount),
+    warnedAt: timestampMillis(data.warnedAt) || null,
   };
 }
 
@@ -1157,8 +1161,14 @@ async function deleteReplyReactionsForPost(
   }
 }
 
-/** Soft-deletes an owned post, cleans up artifacts, then records completion. */
-export async function deletePost(uid: string, postId: string): Promise<void> {
+/**
+ * Soft-deletes a post, cleans up its artifacts, then records completion.
+ * `authorize` runs inside the transaction after the post is read.
+ */
+async function softDeletePost(
+  postId: string,
+  authorize: (data: CommunityPostDoc) => void,
+): Promise<void> {
   const db = getCommunityFirestore();
   const ref = db.collection(POSTS).doc(postId);
 
@@ -1168,10 +1178,7 @@ export async function deletePost(uid: string, postId: string): Promise<void> {
       throw new CommunityNotFoundError();
     }
     const data = snapshot.data() as CommunityPostDoc;
-    if (data.authorId !== uid) {
-      // Do not reveal whether someone else's post exists.
-      throw new CommunityNotFoundError();
-    }
+    authorize(data);
 
     const status = readStatus(data.status);
     if (status !== 'deleted') {
@@ -1207,6 +1214,16 @@ export async function deletePost(uid: string, postId: string): Promise<void> {
       // still done.
       if (!isFirestoreNotFoundError(error)) throw error;
     });
+}
+
+/** Soft-deletes an owned post, cleans up artifacts, then records completion. */
+export async function deletePost(uid: string, postId: string): Promise<void> {
+  await softDeletePost(postId, (data) => {
+    if (data.authorId !== uid) {
+      // Do not reveal whether someone else's post exists.
+      throw new CommunityNotFoundError();
+    }
+  });
 }
 
 export async function reportPost(
@@ -1268,7 +1285,7 @@ export async function reportPost(
 /** Applies a moderation action to a post and reconciles its reports. */
 export async function moderatePost(
   postId: string,
-  action: 'hide' | 'restore' | 'dismiss-reports',
+  action: CommunityPostModerationAction,
 ): Promise<void> {
   const db = getCommunityFirestore();
   const postRef = db.collection(POSTS).doc(postId);
@@ -1278,12 +1295,63 @@ export async function moderatePost(
   }
 
   const postData = postSnapshot.data() as CommunityPostDoc;
-  if (readStatus(postData.status) === 'deleted' && action !== 'dismiss-reports') {
+  const status = readStatus(postData.status);
+  if (
+    status === 'deleted' &&
+    action !== 'dismiss-reports' &&
+    action !== 'delete'
+  ) {
     throw new CommunityError(
-      'Deleted posts cannot be restored or hidden. Dismiss the remaining reports instead.',
+      'Deleted posts cannot be restored, hidden, or warned. Finish deleting them or dismiss the remaining reports.',
       409,
       'post_deleted',
     );
+  }
+
+  if (action === 'delete') {
+    // Admin deletion reuses the normal soft-delete pipeline without requiring
+    // the caller to be the post author.
+    await softDeletePost(postId, () => {});
+    return;
+  }
+
+  if (action === 'warn') {
+    await db.runTransaction(async (transaction) => {
+      const snapshot = await transaction.get(postRef);
+      if (!snapshot.exists) {
+        throw new CommunityNotFoundError();
+      }
+      const data = snapshot.data() as CommunityPostDoc;
+      if (readStatus(data.status) === 'deleted') {
+        throw new CommunityError(
+          'Deleted posts cannot be warned.',
+          409,
+          'post_deleted',
+        );
+      }
+
+      const openReports = await transaction.get(
+        db
+          .collection(REPORTS)
+          .where('postId', '==', postId)
+          .where('status', '==', 'open'),
+      );
+      const now = Timestamp.now();
+      for (const report of openReports.docs) {
+        transaction.update(report.ref, {
+          status: 'dismissed',
+          reviewedAt: now,
+        });
+      }
+      transaction.update(postRef, {
+        reportCount: 0,
+        needsReview: false,
+        warnedAt: now,
+        warningCount: readNumber(data.warningCount) + 1,
+        updatedAt: now,
+      });
+    });
+    return;
   }
 
   if (action === 'dismiss-reports') {

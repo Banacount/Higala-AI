@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from 'react';
 import type { User } from 'firebase/auth';
+import { useSetAdminStatus } from '@/context/AdminStatusContext';
 import {
   ensureAnonymousUser,
   getFirebaseClientAuth,
@@ -31,6 +32,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const configured = isFirebaseConfigured();
+  const setAdminStatus = useSetAdminStatus();
   const [status, setStatus] = useState<AuthStatus>(
     configured ? 'loading' : 'unavailable',
   );
@@ -38,6 +40,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
+
+  useEffect(() => {
+    setAdminStatus(isAdmin);
+  }, [isAdmin, setAdminStatus]);
 
   useEffect(() => {
     if (!configured) {

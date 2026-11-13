@@ -2,11 +2,13 @@ import {
   COMMUNITY_LIMITS,
   isCommunityCategory,
   isCommunityModerationAction,
+  isCommunityPostModerationAction,
   isCommunityReaction,
   isCommunityReportReason,
   isReplyEmoji,
   type CommunityCategory,
   type CommunityModerationAction,
+  type CommunityPostModerationAction,
   type CommunityReaction,
   type CommunityReportReason,
   type ReplyEmoji,
@@ -49,7 +51,7 @@ export interface ModerateReplyInput {
 
 export interface ModeratePostInput {
   postId: string;
-  action: CommunityModerationAction;
+  action: CommunityPostModerationAction;
 }
 
 const POST_ID_PATTERN = /^[A-Za-z0-9_-]{1,128}$/;
@@ -188,10 +190,11 @@ export function parseModerateReply(body: unknown): ModerateReplyInput {
   return { postId, replyId, action: record.moderationAction };
 }
 
+/** Parses and validates a moderation action for a post, including warn/delete. */
 export function parseModeratePost(body: unknown): ModeratePostInput {
   const record = asRecord(body);
   const postId = parsePostId(record.postId);
-  if (!isCommunityModerationAction(record.moderationAction)) {
+  if (!isCommunityPostModerationAction(record.moderationAction)) {
     throw new CommunityError('Choose a valid moderation action.');
   }
   return { postId, action: record.moderationAction };
