@@ -2,12 +2,13 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { ArrowUpRight, Check, Copy } from 'lucide-react';
+import { ArrowUpRight, Check, Copy, LoaderCircle, Mic } from 'lucide-react';
 import type { ChatMessage } from '@/shared/types';
 import { TOOL_DETAILS } from '@/lib/constants';
-import { formatTime } from '@/lib/utils';
+import { formatDuration, formatTime } from '@/lib/utils';
 import { BrandMark } from '@/components/BrandMark';
 import { ToolIcon } from '@/components/tools/ToolIcon';
+import { VoicePlayer } from '@/components/chat/VoicePlayer';
 
 export function ChatBubble({ message }: { message: ChatMessage }) {
   const [copied, setCopied] = useState(false);
@@ -30,6 +31,64 @@ export function ChatBubble({ message }: { message: ChatMessage }) {
       // Clipboard access may be blocked; fail quietly.
     }
   };
+
+  if (isUser && message.kind === 'voice' && message.voice) {
+    const voice = message.voice;
+    const processing = voice.status === 'processing';
+    const failed = voice.status === 'failed';
+
+    return (
+      <div className="flex justify-end animate-fade-up">
+        <div className="flex w-full max-w-[86%] flex-col items-end sm:max-w-[76%]">
+          <div className="w-full min-w-0 rounded-[1.4rem] rounded-br-[0.4rem] bg-pine-900 px-3.5 py-3 text-cream shadow-[0_12px_30px_-20px_rgba(7,37,28,.8)]">
+            <div className="flex items-center gap-1.5">
+              <Mic className="h-3.5 w-3.5 text-pine-200/80" aria-hidden="true" />
+              <span className="text-[0.56rem] font-bold uppercase tracking-[0.12em] text-pine-200/80">
+                Voice message
+              </span>
+              <span className="ml-auto text-[0.58rem] font-semibold tabular-nums text-cream/60">
+                {formatDuration(voice.durationMs)}
+              </span>
+            </div>
+
+            <div className="mt-2 min-w-0 rounded-2xl bg-white/10 px-2.5 py-2">
+              <VoicePlayer
+                src={voice.url}
+                durationMs={voice.durationMs}
+                tone="dark"
+              />
+            </div>
+
+            <div className="mt-2.5 border-t border-white/15 pt-2" aria-live="polite">
+              <p className="text-[0.52rem] font-bold uppercase tracking-[0.12em] text-pine-200/60">
+                Transcription
+              </p>
+              {processing ? (
+                <p className="mt-1 flex items-center gap-1.5 text-[0.76rem] text-cream/70">
+                  <LoaderCircle
+                    className="h-3 w-3 animate-spin"
+                    aria-hidden="true"
+                  />
+                  Transcribing…
+                </p>
+              ) : failed ? (
+                <p className="mt-1 text-[0.76rem] leading-relaxed text-cream/70">
+                  Transcription failed. You can still play the recording.
+                </p>
+              ) : (
+                <p className="mt-1 whitespace-pre-wrap text-[0.88rem] leading-relaxed text-cream/90">
+                  {message.content}
+                </p>
+              )}
+            </div>
+          </div>
+          <p className="mt-1 pr-1 text-[0.58rem] font-semibold uppercase tracking-[0.1em] text-muted/70">
+            {formatTime(message.createdAt)}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (isUser) {
     return (

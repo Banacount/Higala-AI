@@ -5,11 +5,27 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { ChatValidationError, handleChat } from './server/chat.ts';
 import { handleCommunity } from './server/community.ts';
-import { readJsonBody, sendJson } from './server/http.ts';
+import {
+  PayloadTooLargeError,
+  readJsonBody,
+  readRawBody,
+  sendJson,
+} from './server/http.ts';
+import { MultipartError, parseMultipartForm } from './server/multipart.ts';
+import {
+  MAX_VOICE_AUDIO_BYTES,
+  VoiceUnavailableError,
+  VoiceValidationError,
+  handleVoiceChat,
+} from './server/voice.ts';
 
 const MAX_BODY_BYTES = 1_000_000;
 
 const COMMUNITY_MAX_BODY_BYTES = 64 * 1024;
+
+const VOICE_MAX_BODY_BYTES = 3_500_000;
+
+const VOICE_MAX_FIELD_BYTES = 128 * 1024;
 
 function readChatBody(req: IncomingMessage): Promise<unknown> {
   return new Promise((resolve, reject) => {
@@ -88,6 +104,90 @@ function chatApiPlugin(env: Record<string, string>): Plugin {
     },
     // Keep the Connect typing honest without forcing the dev server to depend
     // on it. `next` is part of the standard middleware signature.
+    enforce: 'pre',
+  } satisfies Plugin;
+}
+
+function voiceApiPlugin(env: Record<string, string>): Plugin {
+  const middleware = async (
+    req: IncomingMessage,
+    res: ServerResponse,
+    _next: (error?: unknown) => void,
+  ) => {
+    if (req.method !== 'POST') {
+      sendJson(
+        res,
+        405,
+        { error: 'Method not allowed. Use POST.' },
+        { Allow: 'POST' },
+      );
+      return;
+    }
+
+    const contentType = req.headers['content-type'] ?? '';
+    if (!contentType.toLowerCase().startsWith('multipart/form-data')) {
+      sendJson(res, 415, {
+        error: 'Content-Type must be multipart/form-data.',
+      });
+      return;
+    }
+
+    try {
+      const contentLength = Number(req.headers['content-length'] ?? 0);
+      if (
+        Number.isFinite(contentLength) &&
+        contentLength > VOICE_MAX_BODY_BYTES
+      ) {
+        sendJson(res, 413, { error: 'The voice message is too large.' });
+        return;
+      }
+
+      const body = await readRawBody(
+        req as Parameters<typeof readRawBody>[0],
+        VOICE_MAX_BODY_BYTES,
+      );
+      const form = parseMultipartForm(body, contentType, {
+        maxFileBytes: MAX_VOICE_AUDIO_BYTES,
+        maxFieldBytes: VOICE_MAX_FIELD_BYTES,
+        maxFiles: 1,
+      });
+      const result = await handleVoiceChat(form, {
+        apiKey: env.GEMINI_API_KEY,
+        model: env.GEMINI_MODEL,
+      });
+      sendJson(res, 200, result);
+    } catch (error) {
+      if (
+        error instanceof VoiceValidationError ||
+        error instanceof ChatValidationError ||
+        error instanceof MultipartError ||
+        error instanceof SyntaxError
+      ) {
+        sendJson(res, 400, { error: error.message });
+        return;
+      }
+      if (error instanceof PayloadTooLargeError) {
+        sendJson(res, 413, { error: 'The voice message is too large.' });
+        return;
+      }
+      if (error instanceof VoiceUnavailableError) {
+        sendJson(res, 503, { error: error.message });
+        return;
+      }
+      sendJson(res, 500, {
+        error: 'The support service is unavailable right now.',
+      });
+    }
+  };
+
+  return {
+    name: 'higala-voice-api',
+    configureServer(server) {
+      server.middlewares.use('/api/voice-chat', middleware);
+    },
+    configurePreviewServer(server) {
+      server.middlewares.use('/api/voice-chat', middleware);
+    },
     enforce: 'pre',
   } satisfies Plugin;
 }
@@ -179,6 +279,7 @@ export default defineConfig(({ mode }) => {
       react(),
       tailwindcss(),
       chatApiPlugin(env),
+      voiceApiPlugin(env),
       communityApiPlugin(env),
     ],
     resolve: {

@@ -73,6 +73,52 @@ export async function readJsonBody(
   });
 }
 
+export async function readRawBody(
+  req: JsonRequest,
+  maxBytes: number,
+): Promise<Buffer> {
+  // Vercel's Node runtime buffers some bodies for us. A multipart body must be
+  // a Buffer: decoding it as text first would corrupt the audio bytes.
+  if (req.body !== undefined) {
+    if (Buffer.isBuffer(req.body)) {
+      if (req.body.byteLength > maxBytes) {
+        throw new PayloadTooLargeError();
+      }
+      return req.body;
+    }
+    if (typeof req.body === 'string') {
+      const buffer = Buffer.from(req.body, 'utf8');
+      if (buffer.byteLength > maxBytes) {
+        throw new PayloadTooLargeError();
+      }
+      return buffer;
+    }
+    throw new Error('The raw request body is unavailable.');
+  }
+
+  if (req.readableEnded) {
+    throw new SyntaxError('Invalid request body.');
+  }
+
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    let size = 0;
+
+    req.on('data', (chunk: Buffer) => {
+      size += chunk.length;
+      if (size > maxBytes) {
+        reject(new PayloadTooLargeError());
+        req.destroy();
+        return;
+      }
+      chunks.push(chunk);
+    });
+
+    req.on('end', () => resolve(Buffer.concat(chunks)));
+    req.on('error', reject);
+  });
+}
+
 function requestHost(req: JsonRequest): string {
   const forwardedHost = req.headers['x-forwarded-host'];
   const host = Array.isArray(forwardedHost) ? forwardedHost[0] : forwardedHost;
