@@ -1,11 +1,11 @@
 export function PostSkeleton() {
   return (
-    <div className="space-y-4" aria-hidden="true">
+    <div
+      className="divide-y divide-pine-900/8 overflow-hidden rounded-[1.6rem] border border-pine-900/8 bg-white/70"
+      aria-hidden="true"
+    >
       {[0, 1, 2].map((index) => (
-        <div
-          key={index}
-          className="animate-pulse rounded-[1.6rem] border border-pine-900/8 bg-white/70 p-5"
-        >
+        <div key={index} className="animate-pulse p-5">
           <div className="flex items-center justify-between gap-4">
             <div className="h-5 w-24 rounded-full bg-pine-100" />
             <div className="h-3 w-16 rounded-full bg-cream-deep" />

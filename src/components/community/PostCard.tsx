@@ -28,7 +28,7 @@ export function PostCard({
     <Link
       to={`/community/${post.id}`}
       className={clsx(
-        'group block rounded-[1.6rem] border border-pine-900/8 bg-white/75 p-5 shadow-[0_18px_38px_-34px_rgba(7,37,28,.5)] transition duration-200 hover:-translate-y-0.5 hover:border-pine-900/15 hover:bg-white',
+        'group block p-5 transition duration-200 hover:bg-white/70',
         className,
       )}
     >
