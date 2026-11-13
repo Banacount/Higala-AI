@@ -80,34 +80,9 @@ export function ChatPage() {
 
   return (
     <div className="flex h-[calc(100dvh-8rem)] flex-col overflow-hidden lg:h-dvh">
-      <header className="shrink-0 border-b border-pine-900/8 bg-cream">
-        <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-2 px-4 py-3 sm:px-6">
-          <div className="flex min-w-0 items-center gap-2.5">
-            <div className="relative shrink-0">
-              <BrandMark size={38} />
-              <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-cream bg-pine-400" />
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-1.5">
-                <h1 className="font-display text-lg font-semibold leading-none text-pine-950">
-                  Higala
-                </h1>
-                {demoMode ? (
-                  <span
-                    className="rounded-full bg-sun-soft px-1.5 py-0.5 text-[0.5rem] font-extrabold uppercase tracking-[0.1em] text-[#8a6018]"
-                    title="The latest reply came from the offline demo engine because a live Gemini reply was not available."
-                  >
-                    Demo
-                  </span>
-                ) : null}
-              </div>
-              <p className="mt-0.5 truncate text-[0.6rem] font-semibold uppercase tracking-[0.11em] text-muted/70">
-                Online · 24/7 · {language.label}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex shrink-0 items-center gap-1.5">
+      <header className="shrink-0 bg-cream">
+        <div className="mx-auto flex w-full max-w-5xl flex-col items-center justify-center gap-1.5 px-4 py-3 sm:px-6">
+          <div className="flex shrink-0 items-center justify-center gap-1.5">
             <LanguagePicker />
             <button
               type="button"
@@ -127,6 +102,20 @@ export function ChatPage() {
             >
               <Info className="h-3.5 w-3.5" aria-hidden="true" />
             </button>
+          </div>
+
+          <div className="flex items-center justify-center gap-1.5">
+            <p className="truncate text-center text-[0.6rem] font-semibold uppercase tracking-[0.11em] text-muted/70">
+              Online · 24/7 · {language.label}
+            </p>
+            {demoMode ? (
+              <span
+                className="rounded-full bg-sun-soft px-1.5 py-0.5 text-[0.5rem] font-extrabold uppercase tracking-[0.1em] text-[#8a6018]"
+                title="The latest reply came from the offline demo engine because a live Gemini reply was not available."
+              >
+                Demo
+              </span>
+            ) : null}
           </div>
         </div>
       </header>
