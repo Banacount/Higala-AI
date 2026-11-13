@@ -127,7 +127,7 @@ export function CommunityPage() {
         ) : posts.length === 0 ? (
           <CommunityEmptyState category={category} />
         ) : (
-          <div className="space-y-4">
+          <div className="divide-y divide-pine-900/8 overflow-hidden rounded-[1.6rem] border border-pine-900/8 bg-white/75 shadow-[0_18px_38px_-34px_rgba(7,37,28,.5)]">
             {posts.map((post) => (
               <PostCard key={post.id} post={post} />
             ))}

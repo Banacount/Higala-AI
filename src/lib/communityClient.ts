@@ -4,6 +4,7 @@ import type {
   CommunityModerationQueue,
   CommunityPost,
   CommunityPostList,
+  CommunityPostModerationAction,
   CommunityReaction,
   CommunityReply,
   CommunityReplyList,
@@ -266,8 +267,9 @@ export function moderateReply(
   );
 }
 
+/** Sends a moderation action for a post, including warn and delete. */
 export function moderatePost(
-  input: { postId: string; action: CommunityModerationAction },
+  input: { postId: string; action: CommunityPostModerationAction },
   token: string,
 ): Promise<{ ok: true }> {
   return communityPost(
