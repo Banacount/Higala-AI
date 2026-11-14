@@ -308,16 +308,16 @@ export function CommunityModerationPage() {
 
       <CommunityAuthGate>
         {authStatus === 'ready' && !isAdmin ? (
-          <div className="rounded-[1.8rem] border border-pine-900/10 bg-white/65 px-6 py-12 text-center">
-            <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-clay-soft text-clay">
+          <div className="rounded-[1.8rem] border border-pine-900/10 bg-white/65 px-6 py-12 text-center dark:border-white/10 dark:bg-[#0e221b]/85">
+            <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-clay-soft text-clay dark:bg-clay/20 dark:text-[#f0a587]">
               <ShieldAlert className="h-6 w-6" aria-hidden="true" />
             </span>
-            <h2 className="mt-4 font-display text-xl font-semibold text-pine-950">
+            <h2 className="mt-4 font-display text-xl font-semibold text-pine-950 dark:text-cream">
               Moderator access required
             </h2>
-            <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted">
+            <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted dark:text-pine-200/70">
               This page is only available to accounts with the{' '}
-              <code className="rounded bg-pine-100 px-1 py-0.5 text-[0.72rem] text-pine-800">
+              <code className="rounded bg-pine-100 px-1 py-0.5 text-[0.72rem] text-pine-800 dark:bg-pine-800/80 dark:text-pine-200">
                 admin
               </code>{' '}
               custom claim. If a moderator just granted you access, check again
@@ -337,16 +337,16 @@ export function CommunityModerationPage() {
               {checkingAccess ? 'Checking access.' : 'Check access again'}
             </Button>
             {error ? (
-              <p className="mx-auto mt-4 max-w-md text-xs leading-relaxed text-clay">
+              <p className="mx-auto mt-4 max-w-md text-xs leading-relaxed text-clay dark:text-[#f6b8a0]">
                 {error}
               </p>
             ) : null}
           </div>
         ) : (
           <div className="space-y-6">
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-pine-900/8 bg-white/60 px-4 py-3">
-              <p className="flex items-center gap-2 text-xs font-semibold text-muted">
-                <ShieldCheck className="h-4 w-4 text-pine-700" aria-hidden="true" />
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-pine-900/8 bg-white/60 px-4 py-3 dark:border-white/10 dark:bg-[#0e221b]/80">
+              <p className="flex items-center gap-2 text-xs font-semibold text-muted dark:text-pine-200/75">
+                <ShieldCheck className="h-4 w-4 text-pine-700 dark:text-pine-300" aria-hidden="true" />
                 Moderator view exposes private risk signals. Do not share what
                 you see here.
               </p>
@@ -357,14 +357,14 @@ export function CommunityModerationPage() {
             </div>
 
             {error ? (
-              <div className="rounded-2xl border border-clay/20 bg-clay-soft/70 px-4 py-3 text-sm text-clay">
+              <div className="rounded-2xl border border-clay/20 bg-clay-soft/70 px-4 py-3 text-sm text-clay dark:border-clay/30 dark:bg-clay/15 dark:text-[#f6b8a0]">
                 {error}
               </div>
             ) : null}
 
             {loading ? (
-              <div className="flex min-h-[16rem] items-center justify-center rounded-[1.8rem] border border-pine-900/8 bg-white/55">
-                <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-muted">
+              <div className="flex min-h-[16rem] items-center justify-center rounded-[1.8rem] border border-pine-900/8 bg-white/55 dark:border-white/10 dark:bg-[#0e221b]/80">
+                <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-muted dark:text-pine-200/70">
                   <Loader2
                     className="h-4 w-4 animate-spin"
                     aria-hidden="true"
@@ -373,7 +373,7 @@ export function CommunityModerationPage() {
                 </p>
               </div>
             ) : forbidden ? (
-              <div className="rounded-2xl border border-clay/20 bg-clay-soft/70 px-4 py-3 text-sm text-clay">
+              <div className="rounded-2xl border border-clay/20 bg-clay-soft/70 px-4 py-3 text-sm text-clay dark:border-clay/30 dark:bg-clay/15 dark:text-[#f6b8a0]">
                 <p>
                   The server rejected moderator access for this session. If a
                   moderator just granted you access, refresh your session.
@@ -400,13 +400,13 @@ export function CommunityModerationPage() {
               <>
                 <section>
                   <div className="mb-3 flex items-center justify-between gap-3">
-                    <h2 className="font-display text-xl font-semibold text-pine-950">
+                    <h2 className="font-display text-xl font-semibold text-pine-950 dark:text-cream">
                       Open reports
                     </h2>
                     <Badge tone="clay">{queue.reports.length} open</Badge>
                   </div>
                   {queue.reports.length === 0 ? (
-                    <p className="rounded-2xl border border-dashed border-pine-900/12 bg-white/50 px-4 py-6 text-sm text-muted">
+                    <p className="rounded-2xl border border-dashed border-pine-900/12 bg-white/50 px-4 py-6 text-sm text-muted dark:border-pine-500/35 dark:bg-[#0e221b]/65 dark:text-pine-200/70">
                       No open reports right now.
                     </p>
                   ) : (
@@ -414,30 +414,30 @@ export function CommunityModerationPage() {
                       {queue.reports.map((report) => (
                         <div
                           key={report.id}
-                          className="rounded-2xl border border-pine-900/8 bg-white/70 p-4"
+                          className="rounded-2xl border border-pine-900/8 bg-white/70 p-4 dark:border-white/10 dark:bg-[#0e221b]/85"
                         >
                           <div className="flex flex-wrap items-center justify-between gap-2">
-                            <span className="flex items-center gap-1.5 text-[0.66rem] font-extrabold uppercase tracking-[0.13em] text-clay">
+                            <span className="flex items-center gap-1.5 text-[0.66rem] font-extrabold uppercase tracking-[0.13em] text-clay dark:text-[#f0a587]">
                               <Flag className="h-3 w-3" aria-hidden="true" />
                               {reasonLabel(report.reason)}
                             </span>
-                            <span className="text-[0.66rem] text-muted">
+                            <span className="text-[0.66rem] text-muted dark:text-pine-200/65">
                               {formatRelativeTime(report.createdAt)}
                             </span>
                           </div>
                           {report.description ? (
-                            <p className="mt-2 text-sm leading-relaxed text-ink/85">
+                            <p className="mt-2 text-sm leading-relaxed text-ink/85 dark:text-pine-100/85">
                               {report.description}
                             </p>
                           ) : (
-                            <p className="mt-2 text-xs italic text-muted">
+                            <p className="mt-2 text-xs italic text-muted dark:text-pine-200/55">
                               No extra details were provided.
                             </p>
                           )}
                           <div className="mt-3 flex flex-wrap items-center gap-2">
                             <Link
                               to={`/community/${report.postId}`}
-                              className="mr-auto text-xs font-bold text-pine-800 underline underline-offset-2"
+                              className="mr-auto text-xs font-bold text-pine-800 underline underline-offset-2 dark:text-pine-300"
                             >
                               Open reported post
                             </Link>
@@ -474,13 +474,13 @@ export function CommunityModerationPage() {
 
                 <section>
                   <div className="mb-3 flex items-center justify-between gap-3">
-                    <h2 className="font-display text-xl font-semibold text-pine-950">
+                    <h2 className="font-display text-xl font-semibold text-pine-950 dark:text-cream">
                       Flagged replies
                     </h2>
                     <Badge tone="sun">{queue.replies.length} replies</Badge>
                   </div>
                   {queue.replies.length === 0 ? (
-                    <p className="rounded-2xl border border-dashed border-pine-900/12 bg-white/50 px-4 py-6 text-sm text-muted">
+                    <p className="rounded-2xl border border-dashed border-pine-900/12 bg-white/50 px-4 py-6 text-sm text-muted dark:border-pine-500/35 dark:bg-[#0e221b]/65 dark:text-pine-200/70">
                       No replies are waiting for review.
                     </p>
                   ) : (
@@ -488,7 +488,7 @@ export function CommunityModerationPage() {
                       {queue.replies.map((reply) => (
                         <article
                           key={reply.id}
-                          className="rounded-2xl border border-pine-900/8 bg-white/75 p-4"
+                          className="rounded-2xl border border-pine-900/8 bg-white/75 p-4 dark:border-white/10 dark:bg-[#0e221b]/85"
                         >
                           <div className="flex flex-wrap items-center gap-2">
                             <Badge
@@ -506,19 +506,19 @@ export function CommunityModerationPage() {
                             ) : reply.riskLevel === 'watch' ? (
                               <Badge tone="outline">Watch</Badge>
                             ) : null}
-                            <span className="ml-auto text-[0.66rem] text-muted">
+                            <span className="ml-auto text-[0.66rem] text-muted dark:text-pine-200/65">
                               {formatRelativeTime(reply.createdAt)}
                             </span>
                           </div>
 
-                          <p className="mt-2 max-h-48 overflow-y-auto whitespace-pre-line text-sm leading-relaxed text-ink/85">
+                          <p className="mt-2 max-h-48 overflow-y-auto whitespace-pre-line text-sm leading-relaxed text-ink/85 dark:text-pine-100/85">
                             {reply.content}
                           </p>
 
-                          <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-pine-900/6 pt-3">
+                          <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-pine-900/6 pt-3 dark:border-white/10">
                             <Link
                               to={`/community/${reply.postId}`}
-                              className="mr-auto text-xs font-bold text-pine-800 underline underline-offset-2"
+                              className="mr-auto text-xs font-bold text-pine-800 underline underline-offset-2 dark:text-pine-300"
                             >
                               Open parent post
                             </Link>
@@ -587,13 +587,13 @@ export function CommunityModerationPage() {
 
                 <section>
                   <div className="mb-3 flex items-center justify-between gap-3">
-                    <h2 className="font-display text-xl font-semibold text-pine-950">
+                    <h2 className="font-display text-xl font-semibold text-pine-950 dark:text-cream">
                       Flagged and hidden posts
                     </h2>
                     <Badge tone="sun">{queue.posts.length} posts</Badge>
                   </div>
                   {queue.posts.length === 0 ? (
-                    <p className="rounded-2xl border border-dashed border-pine-900/12 bg-white/50 px-4 py-6 text-sm text-muted">
+                    <p className="rounded-2xl border border-dashed border-pine-900/12 bg-white/50 px-4 py-6 text-sm text-muted dark:border-pine-500/35 dark:bg-[#0e221b]/65 dark:text-pine-200/70">
                       Nothing is waiting for review.
                     </p>
                   ) : (
@@ -601,7 +601,7 @@ export function CommunityModerationPage() {
                       {queue.posts.map((post) => (
                         <article
                           key={post.id}
-                          className="rounded-2xl border border-pine-900/8 bg-white/75 p-4"
+                          className="rounded-2xl border border-pine-900/8 bg-white/75 p-4 dark:border-white/10 dark:bg-[#0e221b]/85"
                         >
                           <div className="flex flex-wrap items-center gap-2">
                             <Badge
@@ -626,30 +626,30 @@ export function CommunityModerationPage() {
                             {post.warnedAt ? (
                               <Badge tone="sun">Warned</Badge>
                             ) : null}
-                            <span className="ml-auto text-[0.66rem] text-muted">
+                            <span className="ml-auto text-[0.66rem] text-muted dark:text-pine-200/65">
                               {formatRelativeTime(post.createdAt)}
                             </span>
                           </div>
 
                           {post.title ? (
-                            <h3 className="mt-2.5 font-display text-lg font-semibold text-pine-950">
+                            <h3 className="mt-2.5 font-display text-lg font-semibold text-pine-950 dark:text-cream">
                               {post.title}
                             </h3>
                           ) : null}
-                          <p className="mt-1.5 max-h-48 overflow-y-auto whitespace-pre-line text-sm leading-relaxed text-ink/85">
+                          <p className="mt-1.5 max-h-48 overflow-y-auto whitespace-pre-line text-sm leading-relaxed text-ink/85 dark:text-pine-100/85">
                             {post.content}
                           </p>
 
-                          <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-pine-900/6 pt-3">
+                          <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-pine-900/6 pt-3 dark:border-white/10">
                             {post.status === 'deleted' ? (
-                              <span className="mr-auto text-xs italic text-muted">
+                              <span className="mr-auto text-xs italic text-muted dark:text-pine-200/60">
                                 The author deleted this post. Only the reports
                                 remain.
                               </span>
                             ) : (
                               <Link
                                 to={`/community/${post.id}`}
-                                className="mr-auto text-xs font-bold text-pine-800 underline underline-offset-2"
+                                className="mr-auto text-xs font-bold text-pine-800 underline underline-offset-2 dark:text-pine-300"
                               >
                                 Open post
                               </Link>

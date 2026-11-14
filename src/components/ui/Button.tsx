@@ -14,13 +14,16 @@ type Size = 'sm' | 'md' | 'lg' | 'icon';
 
 const VARIANTS: Record<Variant, string> = {
   primary:
-    'bg-pine-900 text-cream hover:bg-pine-800 shadow-[0_12px_28px_-18px_rgba(7,37,28,.7)]',
+    'bg-pine-900 text-cream hover:bg-pine-800 shadow-[0_12px_28px_-18px_rgba(7,37,28,.7)] dark:bg-pine-500 dark:text-pine-950 dark:hover:bg-pine-400',
   secondary:
-    'border border-pine-900/12 bg-white/75 text-pine-900 hover:border-pine-900/20 hover:bg-white',
-  soft: 'bg-pine-100 text-pine-900 hover:bg-pine-200',
-  ghost: 'text-pine-900 hover:bg-pine-50',
-  danger: 'bg-clay-soft text-clay hover:bg-[#efd6cb]',
-  light: 'bg-cream text-pine-950 hover:bg-white',
+    'border border-pine-900/12 bg-white/75 text-pine-900 hover:border-pine-900/20 hover:bg-white dark:border-white/12 dark:bg-white/[0.06] dark:text-pine-100 dark:hover:border-white/20 dark:hover:bg-white/[0.11]',
+  soft: 'bg-pine-100 text-pine-900 hover:bg-pine-200 dark:bg-pine-900/70 dark:text-pine-100 dark:hover:bg-pine-800/80',
+  ghost:
+    'text-pine-900 hover:bg-pine-50 dark:text-pine-100 dark:hover:bg-white/[0.06]',
+  danger:
+    'bg-clay-soft text-clay hover:bg-[#efd6cb] dark:bg-clay/20 dark:text-[#f0a587] dark:hover:bg-clay/30',
+  light:
+    'bg-cream text-pine-950 hover:bg-white dark:bg-cream dark:text-pine-950 dark:hover:bg-white',
   lightOutline:
     'border border-white/20 bg-white/5 text-cream hover:border-white/30 hover:bg-white/10',
 };

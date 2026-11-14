@@ -98,24 +98,24 @@ export function SupportiveReactions({
               aria-pressed={isActive}
               className={`group inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs transition duration-150 active:scale-95 disabled:pointer-events-none disabled:opacity-60 ${
                 isActive
-                  ? 'border border-pine-600 bg-pine-100/90 font-semibold text-pine-900 shadow-xs ring-1 ring-pine-500/25 hover:bg-pine-200/80'
-                  : 'border border-pine-900/10 bg-white/70 text-pine-950/80 hover:border-pine-300 hover:bg-white'
+                  ? 'border border-pine-600 bg-pine-100/90 font-semibold text-pine-900 shadow-xs ring-1 ring-pine-500/25 hover:bg-pine-200/80 dark:border-pine-400/70 dark:bg-pine-800/85 dark:text-cream dark:ring-pine-400/30 dark:hover:bg-pine-700/85'
+                  : 'border border-pine-900/10 bg-white/70 text-pine-950/80 hover:border-pine-300 hover:bg-white dark:border-white/12 dark:bg-pine-950/65 dark:text-pine-100/85 dark:hover:border-pine-400/50 dark:hover:bg-pine-900/75'
               }`}
             >
               {isPending ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin text-pine-600" aria-hidden="true" />
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-pine-600 dark:text-pine-300" aria-hidden="true" />
               ) : isActive ? (
-                <Check className="h-3.5 w-3.5 text-pine-700" aria-hidden="true" />
+                <Check className="h-3.5 w-3.5 text-pine-700 dark:text-pine-200" aria-hidden="true" />
               ) : (
-                <IconComponent className="h-3.5 w-3.5 text-pine-600/75 transition group-hover:text-pine-800" />
+                <IconComponent className="h-3.5 w-3.5 text-pine-600/75 transition group-hover:text-pine-800 dark:text-pine-300/80 dark:group-hover:text-pine-200" />
               )}
               <span>{option.label}</span>
               {count > 0 ? (
                 <span
                   className={`ml-0.5 rounded-full px-1.5 py-0.2 text-[0.68rem] font-bold ${
                     isActive
-                      ? 'bg-pine-200/80 text-pine-900'
-                      : 'bg-pine-900/6 text-muted'
+                      ? 'bg-pine-200/80 text-pine-900 dark:bg-pine-700 dark:text-cream'
+                      : 'bg-pine-900/6 text-muted dark:bg-white/10 dark:text-pine-200/75'
                   }`}
                 >
                   {count}
@@ -127,7 +127,7 @@ export function SupportiveReactions({
       </div>
 
       {error ? (
-        <p className="rounded-xl bg-clay-soft px-3 py-1.5 text-xs font-semibold text-clay">
+        <p className="rounded-xl bg-clay-soft px-3 py-1.5 text-xs font-semibold text-clay dark:bg-clay/20 dark:text-[#f6b8a0]">
           {error}
         </p>
       ) : null}

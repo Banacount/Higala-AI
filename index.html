@@ -23,6 +23,23 @@
       rel="stylesheet"
     />
     <title>Higala-AI — a friend who tells you the truth</title>
+    <script>
+      (function () {
+        try {
+          var raw = window.localStorage.getItem('higala.theme.v1');
+          var pref = raw ? JSON.parse(raw) : 'system';
+          var systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          var isDark = pref === 'dark' || (pref !== 'light' && systemDark);
+          var root = document.documentElement;
+          root.classList.toggle('dark', isDark);
+          root.style.colorScheme = isDark ? 'dark' : 'light';
+          var meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) {
+            meta.setAttribute('content', isDark ? '#062018' : '#0B3B2E');
+          }
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

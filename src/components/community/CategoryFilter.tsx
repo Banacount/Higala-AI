@@ -36,8 +36,8 @@ export function CategoryFilter({
             className={clsx(
               'shrink-0 rounded-full px-3.5 py-2 text-xs font-bold transition-colors',
               active
-                ? 'bg-pine-900 text-cream shadow-[0_10px_24px_-18px_rgba(7,37,28,.9)]'
-                : 'border border-pine-900/10 bg-white/65 text-muted hover:border-pine-900/20 hover:text-pine-900',
+                ? 'bg-pine-900 text-cream shadow-[0_10px_24px_-18px_rgba(7,37,28,.9)] dark:bg-pine-500 dark:text-pine-950'
+                : 'border border-pine-900/10 bg-white/65 text-muted hover:border-pine-900/20 hover:text-pine-900 dark:border-white/10 dark:bg-[#0e221b]/80 dark:text-pine-200/75 dark:hover:border-pine-500/40 dark:hover:text-cream',
             )}
           >
             {option.label}

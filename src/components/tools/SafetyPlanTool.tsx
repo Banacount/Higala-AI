@@ -118,7 +118,7 @@ export function SafetyPlanTool() {
 
   return (
     <div className="space-y-5">
-      <div className="rounded-2xl bg-pine-900 p-4 text-cream">
+      <div className="rounded-2xl bg-pine-900 p-4 text-cream dark:border dark:border-white/10">
         <div className="flex items-start gap-2.5">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/10 text-pine-200">
             <LifeBuoy className="h-4 w-4" aria-hidden="true" />
@@ -153,17 +153,17 @@ export function SafetyPlanTool() {
         {FIELDS.map((field) => (
           <div key={field.key}>
             <div className="flex items-baseline gap-2">
-              <span className="text-[0.58rem] font-extrabold tracking-[0.14em] text-pine-500">
+              <span className="text-[0.58rem] font-extrabold tracking-[0.14em] text-pine-500 dark:text-pine-300">
                 {field.number}
               </span>
               <label
                 htmlFor={`safety-${field.key}`}
-                className="text-[0.68rem] font-extrabold uppercase tracking-[0.1em] text-pine-800"
+                className="text-[0.68rem] font-extrabold uppercase tracking-[0.1em] text-pine-800 dark:text-pine-200"
               >
                 {field.label}
               </label>
             </div>
-            <p className="mb-1.5 mt-0.5 text-[0.66rem] leading-relaxed text-muted">
+            <p className="mb-1.5 mt-0.5 text-[0.66rem] leading-relaxed text-muted dark:text-pine-200/65">
               {field.hint}
             </p>
             <textarea
@@ -172,18 +172,18 @@ export function SafetyPlanTool() {
               onChange={(event) => setField(field.key, event.target.value)}
               rows={2}
               placeholder={field.placeholder}
-              className="w-full resize-none rounded-xl border border-pine-900/10 bg-white/70 px-3 py-2.5 text-sm leading-relaxed text-ink outline-none transition placeholder:text-muted/40 focus:border-pine-400 focus:bg-white"
+              className="w-full resize-none rounded-xl border border-pine-900/10 bg-white/70 px-3 py-2.5 text-sm leading-relaxed text-ink outline-none transition placeholder:text-muted/40 focus:border-pine-400 focus:bg-white dark:border-white/12 dark:bg-pine-950/75 dark:text-cream dark:placeholder:text-pine-200/40 dark:focus:border-pine-400 dark:focus:bg-pine-950"
             />
           </div>
         ))}
       </div>
 
-      <div className="flex items-start gap-2 rounded-xl border border-pine-200 bg-pine-50 px-3 py-2.5">
+      <div className="flex items-start gap-2 rounded-xl border border-pine-200 bg-pine-50 px-3 py-2.5 dark:border-pine-500/25 dark:bg-pine-900/65">
         <ShieldCheck
-          className="mt-0.5 h-3.5 w-3.5 shrink-0 text-pine-600"
+          className="mt-0.5 h-3.5 w-3.5 shrink-0 text-pine-600 dark:text-pine-300"
           aria-hidden="true"
         />
-        <p className="text-[0.65rem] leading-relaxed text-pine-900/70">
+        <p className="text-[0.65rem] leading-relaxed text-pine-900/70 dark:text-pine-100/80">
           This plan is saved only on this device. If you share this device,
           clear it in Settings. A plan is not a promise—if you cannot keep
           yourself safe, ask for help.
@@ -191,12 +191,12 @@ export function SafetyPlanTool() {
       </div>
 
       {saved ? (
-        <div className="flex items-center gap-2 rounded-2xl border border-pine-200 bg-pine-50 px-3 py-2.5 text-xs font-semibold text-pine-800">
-          <CheckCircle2 className="h-4 w-4 text-pine-600" aria-hidden="true" />
+        <div className="flex items-center gap-2 rounded-2xl border border-pine-200 bg-pine-50 px-3 py-2.5 text-xs font-semibold text-pine-800 dark:border-pine-500/30 dark:bg-pine-900/70 dark:text-pine-100">
+          <CheckCircle2 className="h-4 w-4 text-pine-600 dark:text-pine-300" aria-hidden="true" />
           Plan saved on this device.
         </div>
       ) : safetyPlan.updatedAt ? (
-        <p className="text-[0.66rem] text-muted">
+        <p className="text-[0.66rem] text-muted dark:text-pine-200/65">
           Last saved{' '}
           {formatShortDateTime(safetyPlan.updatedAt)}
           .

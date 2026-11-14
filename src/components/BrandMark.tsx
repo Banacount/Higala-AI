@@ -67,7 +67,7 @@ export function Wordmark({
       <div className="flex items-baseline gap-1.5">
         <span
           className={`font-display text-2xl font-semibold tracking-tight ${
-            inverted ? 'text-cream' : 'text-pine-950'
+            inverted ? 'text-cream' : 'text-pine-950 dark:text-cream'
           }`}
         >
           Higala
@@ -76,7 +76,7 @@ export function Wordmark({
           className={`rounded-full px-1.5 py-0.5 text-[0.58rem] font-extrabold uppercase tracking-[0.16em] ${
             inverted
               ? 'bg-white/15 text-pine-100'
-              : 'bg-pine-900 text-pine-100'
+              : 'bg-pine-900 text-pine-100 dark:bg-pine-500/20 dark:text-pine-200'
           }`}
         >
           AI

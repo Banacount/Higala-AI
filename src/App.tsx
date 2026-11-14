@@ -60,10 +60,10 @@ function PageLoader() {
     <div className="flex min-h-[55dvh] items-center justify-center">
       <div className="flex flex-col items-center gap-3">
         <span
-          className="h-8 w-8 animate-spin rounded-full border-2 border-pine-200 border-t-pine-600"
+          className="h-8 w-8 animate-spin rounded-full border-2 border-pine-200 border-t-pine-600 dark:border-pine-800 dark:border-t-pine-300"
           aria-hidden="true"
         />
-        <p className="text-[0.62rem] font-extrabold uppercase tracking-[0.14em] text-muted">
+        <p className="text-[0.62rem] font-extrabold uppercase tracking-[0.14em] text-muted dark:text-pine-200/70">
           Loading…
         </p>
       </div>

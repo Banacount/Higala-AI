@@ -53,7 +53,7 @@ export function ChatComposer({
         event.preventDefault();
         submit();
       }}
-      className="rounded-[1.4rem] border border-pine-900/10 bg-white p-2 shadow-[0_18px_50px_-30px_rgba(7,37,28,.45)] transition-colors focus-within:border-pine-400/60 focus-within:bg-white"
+      className="rounded-[1.4rem] border border-pine-900/10 bg-white p-2 shadow-[0_18px_50px_-30px_rgba(7,37,28,.45)] transition-colors focus-within:border-pine-400/60 focus-within:bg-white dark:border-white/12 dark:bg-[#0e221b] dark:shadow-[0_18px_50px_-30px_rgba(0,0,0,.85)] dark:focus-within:border-pine-400/50 dark:focus-within:bg-[#112820]"
     >
       {active ? (
         <VoiceRecorderPanel
@@ -87,7 +87,7 @@ export function ChatComposer({
             }}
             rows={1}
             placeholder="Say what’s actually going on… even if it’s messy."
-            className="max-h-[168px] min-h-[48px] w-full resize-none bg-transparent px-3 py-2.5 text-[0.94rem] leading-relaxed text-ink outline-none placeholder:text-muted/55"
+            className="max-h-[168px] min-h-[48px] w-full resize-none bg-transparent px-3 py-2.5 text-[0.94rem] leading-relaxed text-ink outline-none placeholder:text-muted/55 dark:text-cream dark:placeholder:text-pine-200/45"
           />
         </>
       )}
@@ -96,13 +96,13 @@ export function ChatComposer({
           <button
             type="button"
             onClick={openCrisis}
-            className="inline-flex shrink-0 items-center gap-1 rounded-full px-1.5 py-1 text-[0.58rem] font-bold uppercase tracking-[0.08em] text-clay/85 transition hover:bg-clay-soft hover:text-clay"
+            className="inline-flex shrink-0 items-center gap-1 rounded-full px-1.5 py-1 text-[0.58rem] font-bold uppercase tracking-[0.08em] text-clay/85 transition hover:bg-clay-soft hover:text-clay dark:text-[#f0a587] dark:hover:bg-clay/20 dark:hover:text-[#f6b8a0]"
           >
             <ShieldCheck className="h-3 w-3" aria-hidden="true" />
             Need help now
           </button>
           {active ? null : (
-            <span className="hidden text-[0.58rem] font-medium text-muted/55 sm:inline">
+            <span className="hidden text-[0.58rem] font-medium text-muted/55 dark:text-pine-200/45 sm:inline">
               Enter to send · Shift + Enter for a new line
             </span>
           )}
@@ -124,7 +124,7 @@ export function ChatComposer({
                   ? 'Record a voice message'
                   : 'Voice recording is not supported in this browser'
               }
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-pine-900/10 bg-pine-50 text-pine-800 transition hover:bg-pine-100 active:scale-95 disabled:pointer-events-none disabled:opacity-40"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-pine-900/10 bg-pine-50 text-pine-800 transition hover:bg-pine-100 active:scale-95 disabled:pointer-events-none disabled:opacity-40 dark:border-white/12 dark:bg-pine-900/70 dark:text-pine-200 dark:hover:bg-pine-800"
             >
               {recorder.status === 'requesting' ? (
                 <LoaderCircle
@@ -139,7 +139,7 @@ export function ChatComposer({
               type="submit"
               disabled={loading || !draft.trim()}
               aria-label={loading ? 'Sending' : 'Send message'}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-pine-900 text-cream transition hover:bg-pine-800 active:scale-95 disabled:pointer-events-none disabled:bg-pine-200 disabled:text-pine-600"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-pine-900 text-cream transition hover:bg-pine-800 active:scale-95 disabled:pointer-events-none disabled:bg-pine-200 disabled:text-pine-600 dark:bg-pine-500 dark:text-pine-950 dark:hover:bg-pine-400 dark:disabled:bg-pine-900/60 dark:disabled:text-pine-500"
             >
               {loading ? (
                 <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
@@ -154,15 +154,15 @@ export function ChatComposer({
       {recorder.error ? (
         <div
           role="alert"
-          className="mt-1 flex items-start justify-between gap-2 rounded-xl bg-clay-soft/70 px-2.5 py-1.5"
+          className="mt-1 flex items-start justify-between gap-2 rounded-xl bg-clay-soft/70 px-2.5 py-1.5 dark:bg-clay/20"
         >
-          <p className="text-[0.66rem] leading-relaxed text-clay">
+          <p className="text-[0.66rem] leading-relaxed text-clay dark:text-[#f6b8a0]">
             {recorder.error}
           </p>
           <button
             type="button"
             onClick={recorder.dismissError}
-            className="shrink-0 rounded-full bg-white/60 px-2 py-0.5 text-[0.58rem] font-bold text-pine-800"
+            className="shrink-0 rounded-full bg-white/60 px-2 py-0.5 text-[0.58rem] font-bold text-pine-800 dark:bg-white/10 dark:text-cream"
           >
             Dismiss
           </button>

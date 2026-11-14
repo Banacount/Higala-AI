@@ -55,36 +55,36 @@ export function CommunityPage() {
       />
 
       <div className="mb-6 grid gap-3 sm:grid-cols-3">
-        <div className="rounded-2xl border border-pine-900/8 bg-white/60 p-4">
-          <div className="flex items-center gap-2 text-pine-700">
+        <div className="rounded-2xl border border-pine-900/8 bg-white/60 p-4 dark:border-white/10 dark:bg-[#0e221b]/80">
+          <div className="flex items-center gap-2 text-pine-700 dark:text-pine-300">
             <ShieldCheck className="h-4 w-4" aria-hidden="true" />
             <p className="text-[0.62rem] font-extrabold uppercase tracking-[0.15em]">
               No names
             </p>
           </div>
-          <p className="mt-1.5 text-xs leading-relaxed text-muted">
+          <p className="mt-1.5 text-xs leading-relaxed text-muted dark:text-pine-200/70">
             Posts show only “Anonymous”. Your profile is never attached.
           </p>
         </div>
-        <div className="rounded-2xl border border-pine-900/8 bg-white/60 p-4">
-          <div className="flex items-center gap-2 text-pine-700">
+        <div className="rounded-2xl border border-pine-900/8 bg-white/60 p-4 dark:border-white/10 dark:bg-[#0e221b]/80">
+          <div className="flex items-center gap-2 text-pine-700 dark:text-pine-300">
             <HeartHandshake className="h-4 w-4" aria-hidden="true" />
             <p className="text-[0.62rem] font-extrabold uppercase tracking-[0.15em]">
               Peer support
             </p>
           </div>
-          <p className="mt-1.5 text-xs leading-relaxed text-muted">
+          <p className="mt-1.5 text-xs leading-relaxed text-muted dark:text-pine-200/70">
             People here are not therapists. Care, do not diagnose.
           </p>
         </div>
-        <div className="rounded-2xl border border-pine-900/8 bg-white/60 p-4">
-          <div className="flex items-center gap-2 text-pine-700">
+        <div className="rounded-2xl border border-pine-900/8 bg-white/60 p-4 dark:border-white/10 dark:bg-[#0e221b]/80">
+          <div className="flex items-center gap-2 text-pine-700 dark:text-pine-300">
             <Users className="h-4 w-4" aria-hidden="true" />
             <p className="text-[0.62rem] font-extrabold uppercase tracking-[0.15em]">
               One shared space
             </p>
           </div>
-          <p className="mt-1.5 text-xs leading-relaxed text-muted">
+          <p className="mt-1.5 text-xs leading-relaxed text-muted dark:text-pine-200/70">
             English, Bisaya, Filipino, or a mix. Write the way you think.
           </p>
         </div>
@@ -96,14 +96,14 @@ export function CommunityPage() {
           <button
             type="button"
             onClick={() => setGuidelinesOpen(true)}
-            className="rounded-full border border-pine-900/10 bg-white/65 px-3 py-2 text-[0.66rem] font-bold text-pine-800 transition hover:bg-white"
+            className="rounded-full border border-pine-900/10 bg-white/65 px-3 py-2 text-[0.66rem] font-bold text-pine-800 transition hover:bg-white dark:border-white/12 dark:bg-[#0e221b]/80 dark:text-pine-100 dark:hover:bg-pine-900/80"
           >
             Guidelines
           </button>
           <button
             type="button"
             onClick={openCrisis}
-            className="flex items-center gap-1.5 rounded-full bg-pine-100 px-3 py-2 text-[0.66rem] font-bold text-pine-800 transition hover:bg-pine-200"
+            className="flex items-center gap-1.5 rounded-full bg-pine-100 px-3 py-2 text-[0.66rem] font-bold text-pine-800 transition hover:bg-pine-200 dark:bg-pine-800/85 dark:text-pine-100 dark:hover:bg-pine-700"
           >
             <LifeBuoy className="h-3 w-3" aria-hidden="true" />
             Get help
@@ -113,7 +113,7 @@ export function CommunityPage() {
 
       <CommunityAuthGate>
         {error ? (
-          <div className="mb-4 flex flex-col items-start gap-3 rounded-2xl border border-clay/20 bg-clay-soft/70 px-4 py-3 text-sm text-clay sm:flex-row sm:items-center sm:justify-between">
+          <div className="mb-4 flex flex-col items-start gap-3 rounded-2xl border border-clay/20 bg-clay-soft/70 px-4 py-3 text-sm text-clay sm:flex-row sm:items-center sm:justify-between dark:border-clay/30 dark:bg-clay/15 dark:text-[#f6b8a0]">
             <p className="font-semibold">{error}</p>
             <Button variant="secondary" size="sm" onClick={refresh}>
               <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
@@ -127,7 +127,7 @@ export function CommunityPage() {
         ) : posts.length === 0 ? (
           <CommunityEmptyState category={category} />
         ) : (
-          <div className="divide-y divide-pine-900/8 overflow-hidden rounded-[1.6rem] border border-pine-900/8 bg-white/75 shadow-[0_18px_38px_-34px_rgba(7,37,28,.5)]">
+          <div className="divide-y divide-pine-900/8 overflow-hidden rounded-[1.6rem] border border-pine-900/8 bg-white/75 shadow-[0_18px_38px_-34px_rgba(7,37,28,.5)] dark:divide-white/10 dark:border-white/10 dark:bg-[#0e221b]/85">
             {posts.map((post) => (
               <PostCard key={post.id} post={post} />
             ))}
@@ -136,7 +136,7 @@ export function CommunityPage() {
 
         {loadingMore ? (
           <div className="mt-5 flex justify-center">
-            <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-muted">
+            <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-muted dark:text-pine-200/70">
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
               Loading more
             </p>
@@ -154,11 +154,11 @@ export function CommunityPage() {
                 Load older posts
               </Button>
             ) : (
-              <p className="text-[0.62rem] font-bold uppercase tracking-[0.14em] text-muted/75">
+              <p className="text-[0.62rem] font-bold uppercase tracking-[0.14em] text-muted/75 dark:text-pine-200/60">
                 You have reached the beginning
               </p>
             )}
-            <p className="text-[0.62rem] text-muted/80">
+            <p className="text-[0.62rem] text-muted/80 dark:text-pine-200/55">
               You are reading the newest posts first.
             </p>
           </div>
@@ -166,12 +166,12 @@ export function CommunityPage() {
       </CommunityAuthGate>
 
       {isAdmin ? (
-        <div className="mt-8 rounded-2xl border border-pine-900/10 bg-pine-50/60 px-4 py-3">
-          <p className="text-xs text-muted">
+        <div className="mt-8 rounded-2xl border border-pine-900/10 bg-pine-50/60 px-4 py-3 dark:border-pine-500/25 dark:bg-pine-900/65">
+          <p className="text-xs text-muted dark:text-pine-200/75">
             You have moderator access.{' '}
             <Link
               to="/community/moderation"
-              className="font-bold text-pine-800 underline underline-offset-2"
+              className="font-bold text-pine-800 underline underline-offset-2 dark:text-pine-200"
             >
               Open the moderation queue
             </Link>

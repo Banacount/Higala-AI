@@ -38,7 +38,7 @@ export function CandorExplainer({
       size="lg"
     >
       <div className="space-y-5">
-        <div className="rounded-[1.5rem] bg-pine-900 p-5 text-cream sm:p-6">
+        <div className="rounded-[1.5rem] bg-pine-900 p-5 text-cream dark:border dark:border-white/10 dark:bg-pine-950 sm:p-6">
           <p className="font-display text-xl leading-snug sm:text-2xl">
             “A yes-man makes you feel heard for a moment. A real friend helps
             you tell the truth for longer.”
@@ -53,21 +53,21 @@ export function CandorExplainer({
           {PRINCIPLES.map((principle, index) => (
             <div
               key={principle.title}
-              className="flex gap-3.5 rounded-2xl border border-pine-900/8 bg-white/70 p-4"
+              className="flex gap-3.5 rounded-2xl border border-pine-900/8 bg-white/70 p-4 dark:border-white/10 dark:bg-white/[0.05]"
             >
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-pine-100 text-pine-700">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-pine-100 text-pine-700 dark:bg-pine-900/80 dark:text-pine-300">
                 <principle.icon className="h-5 w-5" aria-hidden="true" />
               </div>
               <div>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-[0.62rem] font-extrabold tracking-[0.16em] text-pine-500">
+                  <span className="text-[0.62rem] font-extrabold tracking-[0.16em] text-pine-500 dark:text-pine-400">
                     0{index + 1}
                   </span>
-                  <h3 className="text-sm font-bold text-pine-950">
+                  <h3 className="text-sm font-bold text-pine-950 dark:text-cream">
                     {principle.title}
                   </h3>
                 </div>
-                <p className="mt-1 text-xs leading-relaxed text-muted">
+                <p className="mt-1 text-xs leading-relaxed text-muted dark:text-pine-200/70">
                   {principle.body}
                 </p>
               </div>
@@ -75,11 +75,11 @@ export function CandorExplainer({
           ))}
         </div>
 
-        <div className="rounded-2xl bg-sun-soft p-4">
-          <p className="text-xs font-bold uppercase tracking-[0.13em] text-[#8a6018]">
+        <div className="rounded-2xl bg-sun-soft p-4 dark:border dark:border-sun/25 dark:bg-sun/12">
+          <p className="text-xs font-bold uppercase tracking-[0.13em] text-[#8a6018] dark:text-[#f2ca78]">
             What Higala is not
           </p>
-          <p className="mt-1.5 text-xs leading-relaxed text-[#72511a]">
+          <p className="mt-1.5 text-xs leading-relaxed text-[#72511a] dark:text-[#e8d2a0]">
             Not a therapist. Not a crisis hotline. Not a replacement for real
             people. Not a machine that will tell you what you want to hear.
           </p>

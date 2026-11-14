@@ -91,7 +91,7 @@ export function VoicePlayer({
             'flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition active:scale-95 disabled:pointer-events-none disabled:opacity-50',
             dark
               ? 'bg-cream/15 text-cream hover:bg-cream/25'
-              : 'bg-pine-100 text-pine-800 hover:bg-pine-200',
+              : 'bg-pine-100 text-pine-800 hover:bg-pine-200 dark:bg-pine-900/80 dark:text-pine-200 dark:hover:bg-pine-800',
           )}
         >
           {playing ? (
@@ -113,13 +113,13 @@ export function VoicePlayer({
             aria-label="Voice message progress"
             className={clsx(
               'h-1.5 w-full cursor-pointer disabled:cursor-default',
-              dark ? 'accent-cream' : 'accent-pine-700',
+              dark ? 'accent-cream' : 'accent-pine-700 dark:accent-pine-400',
             )}
           />
           <div
             className={clsx(
               'mt-0.5 flex items-center justify-between gap-2 text-[0.55rem] font-semibold tabular-nums tracking-[0.04em]',
-              dark ? 'text-cream/60' : 'text-muted/70',
+              dark ? 'text-cream/60' : 'text-muted/70 dark:text-pine-200/65',
             )}
           >
             <span>{formatDuration(currentMs)}</span>

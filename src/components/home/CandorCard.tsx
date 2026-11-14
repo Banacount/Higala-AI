@@ -3,20 +3,20 @@ import { buttonStyles } from '@/components/ui/Button';
 
 export function CandorCard({ onOpen }: { onOpen: () => void }) {
   return (
-    <section className="flex h-full flex-col rounded-[1.55rem] border border-pine-200/70 bg-pine-50/70 p-5 sm:p-6">
+    <section className="flex h-full flex-col rounded-[1.55rem] border border-pine-200/70 bg-pine-50/70 p-5 dark:border-pine-500/25 dark:bg-pine-900/45 sm:p-6">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-[0.6rem] font-extrabold uppercase tracking-[0.16em] text-pine-600">
+        <p className="text-[0.6rem] font-extrabold uppercase tracking-[0.16em] text-pine-600 dark:text-pine-300">
           The Higala way
         </p>
-        <span className="text-[0.56rem] font-extrabold uppercase tracking-[0.14em] text-pine-600/50">
+        <span className="text-[0.56rem] font-extrabold uppercase tracking-[0.14em] text-pine-600/50 dark:text-pine-300/60">
           Radical candor
         </span>
       </div>
 
-      <p className="mt-3 font-display text-[1.4rem] font-medium leading-[1.25] text-pine-950">
+      <p className="mt-3 font-display text-[1.4rem] font-medium leading-[1.25] text-pine-950 dark:text-cream">
         “We won’t say it’s okay when it isn’t.”
       </p>
-      <p className="mt-2 text-xs leading-relaxed text-muted">
+      <p className="mt-2 text-xs leading-relaxed text-muted dark:text-pine-200/70">
         Calling something fine when it’s hurting you is avoidance, not kindness.
       </p>
 

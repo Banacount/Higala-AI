@@ -10,16 +10,16 @@ export function CommunityEmptyState({
   category: CommunityCategory | null;
 }) {
   return (
-    <div className="rounded-[1.8rem] border border-dashed border-pine-900/15 bg-white/55 px-6 py-12 text-center">
-      <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-pine-100 text-pine-700">
+    <div className="rounded-[1.8rem] border border-dashed border-pine-900/15 bg-white/55 px-6 py-12 text-center dark:border-pine-500/35 dark:bg-[#0e221b]/65">
+      <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-pine-100 text-pine-700 dark:bg-pine-800/80 dark:text-pine-200">
         <HeartHandshake className="h-6 w-6" aria-hidden="true" />
       </span>
-      <h2 className="mt-4 font-display text-xl font-semibold text-pine-950">
+      <h2 className="mt-4 font-display text-xl font-semibold text-pine-950 dark:text-cream">
         {category
           ? `No ${communityCategoryLabel(category).toLowerCase()} posts yet`
           : 'The community is quiet right now'}
       </h2>
-      <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-muted">
+      <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-muted dark:text-pine-200/70">
         {category
           ? 'Be the first to share something here, or browse another category. There is no pressure to have the right words.'
           : 'When you are ready, you can be the first to share a thought, a struggle, or a small win. Someone else might need to read it.'}

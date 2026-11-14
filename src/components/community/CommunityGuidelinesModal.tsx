@@ -28,24 +28,24 @@ export function CommunityGuidelinesModal({
         {COMMUNITY_GUIDELINES.map((guideline, index) => (
           <div
             key={guideline.title}
-            className="rounded-2xl border border-pine-900/8 bg-white/60 p-4"
+            className="rounded-2xl border border-pine-900/8 bg-white/60 p-4 dark:border-white/10 dark:bg-pine-950/60"
           >
             <div className="flex items-start gap-3">
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-pine-100 text-[0.68rem] font-extrabold text-pine-700">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-pine-100 text-[0.68rem] font-extrabold text-pine-700 dark:bg-pine-800/80 dark:text-pine-200">
                 {index + 1}
               </span>
               <div>
-                <h3 className="text-sm font-bold text-pine-950">
+                <h3 className="text-sm font-bold text-pine-950 dark:text-cream">
                   {guideline.title}
                 </h3>
-                <p className="mt-1 text-xs leading-relaxed text-muted">
+                <p className="mt-1 text-xs leading-relaxed text-muted dark:text-pine-200/70">
                   {guideline.body}
                 </p>
               </div>
             </div>
           </div>
         ))}
-        <p className="flex items-start gap-2 rounded-2xl bg-sun-soft/70 px-4 py-3 text-xs leading-relaxed text-[#7a5a17]">
+        <p className="flex items-start gap-2 rounded-2xl bg-sun-soft/70 px-4 py-3 text-xs leading-relaxed text-[#7a5a17] dark:border dark:border-sun/25 dark:bg-sun/12 dark:text-[#e8d2a0]">
           <HeartHandshake
             className="mt-0.5 h-4 w-4 shrink-0"
             aria-hidden="true"

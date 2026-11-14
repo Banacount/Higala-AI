@@ -40,7 +40,7 @@ export function ChatBubble({ message }: { message: ChatMessage }) {
     return (
       <div className="flex justify-end animate-fade-up">
         <div className="flex w-full max-w-[86%] flex-col items-end sm:max-w-[76%]">
-          <div className="w-full min-w-0 rounded-[1.4rem] rounded-br-[0.4rem] bg-pine-900 px-3.5 py-3 text-cream shadow-[0_12px_30px_-20px_rgba(7,37,28,.8)]">
+          <div className="w-full min-w-0 rounded-[1.4rem] rounded-br-[0.4rem] bg-pine-900 px-3.5 py-3 text-cream shadow-[0_12px_30px_-20px_rgba(7,37,28,.8)] dark:border dark:border-pine-500/30 dark:bg-pine-800/90">
             <div className="flex items-center gap-1.5">
               <Mic className="h-3.5 w-3.5 text-pine-200/80" aria-hidden="true" />
               <span className="text-[0.56rem] font-bold uppercase tracking-[0.12em] text-pine-200/80">
@@ -82,7 +82,7 @@ export function ChatBubble({ message }: { message: ChatMessage }) {
               )}
             </div>
           </div>
-          <p className="mt-1 pr-1 text-[0.58rem] font-semibold uppercase tracking-[0.1em] text-muted/70">
+          <p className="mt-1 pr-1 text-[0.58rem] font-semibold uppercase tracking-[0.1em] text-muted/70 dark:text-pine-200/55">
             {formatTime(message.createdAt)}
           </p>
         </div>
@@ -94,10 +94,10 @@ export function ChatBubble({ message }: { message: ChatMessage }) {
     return (
       <div className="flex justify-end animate-fade-up">
         <div className="flex max-w-[86%] flex-col items-end sm:max-w-[76%]">
-          <div className="rounded-[1.4rem] rounded-br-[0.4rem] bg-pine-900 px-4 py-3 text-[0.94rem] leading-relaxed text-cream shadow-[0_12px_30px_-20px_rgba(7,37,28,.8)]">
+          <div className="rounded-[1.4rem] rounded-br-[0.4rem] bg-pine-900 px-4 py-3 text-[0.94rem] leading-relaxed text-cream shadow-[0_12px_30px_-20px_rgba(7,37,28,.8)] dark:border dark:border-pine-500/30 dark:bg-pine-800/90">
             <p className="whitespace-pre-wrap">{message.content}</p>
           </div>
-          <p className="mt-1 pr-1 text-[0.58rem] font-semibold uppercase tracking-[0.1em] text-muted/70">
+          <p className="mt-1 pr-1 text-[0.58rem] font-semibold uppercase tracking-[0.1em] text-muted/70 dark:text-pine-200/55">
             {formatTime(message.createdAt)}
           </p>
         </div>
@@ -112,18 +112,20 @@ export function ChatBubble({ message }: { message: ChatMessage }) {
       </div>
       <div className="min-w-0 max-w-[88%] sm:max-w-[80%]">
         <div className="mb-1 flex flex-wrap items-center gap-1.5">
-          <span className="text-xs font-extrabold text-pine-950">Higala</span>
+          <span className="text-xs font-extrabold text-pine-950 dark:text-cream">
+            Higala
+          </span>
           {message.demo ? (
-            <span className="rounded-full bg-sun-soft px-1.5 py-0.5 text-[0.52rem] font-extrabold uppercase tracking-[0.12em] text-[#8a6018]">
+            <span className="rounded-full bg-sun-soft px-1.5 py-0.5 text-[0.52rem] font-extrabold uppercase tracking-[0.12em] text-[#8a6018] dark:bg-sun/20 dark:text-[#f2ca78]">
               Demo
             </span>
           ) : null}
-          <span className="text-[0.58rem] font-semibold uppercase tracking-[0.08em] text-muted/60">
+          <span className="text-[0.58rem] font-semibold uppercase tracking-[0.08em] text-muted/60 dark:text-pine-200/55">
             {formatTime(message.createdAt)}
           </span>
         </div>
 
-        <div className="rounded-[1.4rem] rounded-bl-[0.4rem] border border-pine-900/8 bg-white/80 px-4 py-3.5 shadow-[0_12px_40px_-30px_rgba(7,37,28,.5)]">
+        <div className="rounded-[1.4rem] rounded-bl-[0.4rem] border border-pine-900/8 bg-white/80 px-4 py-3.5 shadow-[0_12px_40px_-30px_rgba(7,37,28,.5)] dark:border-white/10 dark:bg-[#0e221b]/90 dark:shadow-[0_12px_40px_-30px_rgba(0,0,0,.85)]">
           <div className="prose-higala">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>
               {message.content}
@@ -131,7 +133,7 @@ export function ChatBubble({ message }: { message: ChatMessage }) {
           </div>
 
           {message.challenge ? (
-            <p className="mt-2.5 border-l-2 border-sun/70 pl-3 text-[0.82rem] leading-relaxed text-pine-900/80">
+            <p className="mt-2.5 border-l-2 border-sun/70 pl-3 text-[0.82rem] leading-relaxed text-pine-900/80 dark:text-pine-100/85">
               {message.challenge}
             </p>
           ) : null}
@@ -139,9 +141,9 @@ export function ChatBubble({ message }: { message: ChatMessage }) {
           {tool ? (
             <Link
               to={toolHref}
-              className="mt-3 inline-flex items-center gap-2 rounded-full border border-pine-200 bg-pine-50 py-1.5 pl-2 pr-3 text-xs font-bold text-pine-800 transition hover:border-pine-300 hover:bg-pine-100"
+              className="mt-3 inline-flex items-center gap-2 rounded-full border border-pine-200 bg-pine-50 py-1.5 pl-2 pr-3 text-xs font-bold text-pine-800 transition hover:border-pine-300 hover:bg-pine-100 dark:border-pine-500/30 dark:bg-pine-900/60 dark:text-pine-100 dark:hover:border-pine-400/50 dark:hover:bg-pine-800/80"
             >
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-pine-100 text-pine-700">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-pine-100 text-pine-700 dark:bg-pine-800 dark:text-pine-200">
                 <ToolIcon id={message.suggestedTool!} className="h-3.5 w-3.5" />
               </span>
               Try {tool.title} · {tool.duration}
@@ -154,7 +156,7 @@ export function ChatBubble({ message }: { message: ChatMessage }) {
           <button
             type="button"
             onClick={copy}
-            className="inline-flex items-center gap-1 text-[0.58rem] font-bold uppercase tracking-[0.1em] text-muted/55 transition hover:text-pine-700"
+            className="inline-flex items-center gap-1 text-[0.58rem] font-bold uppercase tracking-[0.1em] text-muted/55 transition hover:text-pine-700 dark:text-pine-200/55 dark:hover:text-pine-200"
             aria-label="Copy message"
           >
             {copied ? (
@@ -165,7 +167,7 @@ export function ChatBubble({ message }: { message: ChatMessage }) {
             {copied ? 'Copied' : 'Copy'}
           </button>
           {message.riskLevel === 'crisis' || message.riskLevel === 'elevated' ? (
-            <span className="text-[0.58rem] font-bold uppercase tracking-[0.1em] text-clay">
+            <span className="text-[0.58rem] font-bold uppercase tracking-[0.1em] text-clay dark:text-[#f0a587]">
               Safety check
             </span>
           ) : null}

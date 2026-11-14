@@ -152,8 +152,8 @@ function voiceApiPlugin(env: Record<string, string>): Plugin {
         maxFiles: 1,
       });
       const result = await handleVoiceChat(form, {
-        apiKey: env.GEMINI_API_KEY,
-        model: env.GEMINI_MODEL,
+        apiKey: env.GEMINI_API_KEY || process.env.GEMINI_API_KEY,
+        model: env.GEMINI_MODEL || process.env.GEMINI_MODEL,
       });
       sendJson(res, 200, result);
     } catch (error) {
@@ -288,12 +288,13 @@ export default defineConfig(({ mode }) => {
       },
     },
     server: {
-      port: 5173,
-      host: '127.0.0.1',
+      port: 3000,
+      host: '0.0.0.0',
+      allowedHosts: true,
     },
     preview: {
-      port: 4173,
-      host: '127.0.0.1',
+      port: 3000,
+      host: '0.0.0.0',
     },
   };
 });

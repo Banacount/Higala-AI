@@ -119,12 +119,12 @@ export function ReplyEmojiReactions({
             title={option.label}
             className={`group inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs transition duration-150 active:scale-95 disabled:pointer-events-none disabled:opacity-60 ${
               isActive
-                ? 'border border-pine-600 bg-pine-100/90 font-semibold text-pine-900 shadow-xs ring-1 ring-pine-500/25 hover:bg-pine-200/80'
-                : 'border border-pine-900/10 bg-white/70 text-ink/80 hover:border-pine-300 hover:bg-white'
+                ? 'border border-pine-600 bg-pine-100/90 font-semibold text-pine-900 shadow-xs ring-1 ring-pine-500/25 hover:bg-pine-200/80 dark:border-pine-400/70 dark:bg-pine-800/85 dark:text-cream dark:ring-pine-400/30 dark:hover:bg-pine-700/85'
+                : 'border border-pine-900/10 bg-white/70 text-ink/80 hover:border-pine-300 hover:bg-white dark:border-white/12 dark:bg-pine-950/65 dark:text-pine-100/85 dark:hover:border-pine-400/50 dark:hover:bg-pine-900/75'
             }`}
           >
             {isPending ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin text-pine-600" aria-hidden="true" />
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-pine-600 dark:text-pine-300" aria-hidden="true" />
             ) : (
               <span className="text-sm leading-none" role="img" aria-label={option.label}>
                 {option.emoji}
@@ -133,7 +133,9 @@ export function ReplyEmojiReactions({
             {count > 0 ? (
               <span
                 className={`text-[0.68rem] font-bold ${
-                  isActive ? 'text-pine-900' : 'text-muted'
+                  isActive
+                    ? 'text-pine-900 dark:text-cream'
+                    : 'text-muted dark:text-pine-200/70'
                 }`}
               >
                 {count}
@@ -152,7 +154,7 @@ export function ReplyEmojiReactions({
           aria-expanded={pickerOpen}
           aria-label="Add emoji reaction"
           title="Add reaction"
-          className="inline-flex items-center gap-1 rounded-full border border-dashed border-pine-900/15 bg-white/50 px-2 py-1 text-xs text-muted transition hover:border-pine-400 hover:bg-white hover:text-pine-800 disabled:opacity-50"
+          className="inline-flex items-center gap-1 rounded-full border border-dashed border-pine-900/15 bg-white/50 px-2 py-1 text-xs text-muted transition hover:border-pine-400 hover:bg-white hover:text-pine-800 disabled:opacity-50 dark:border-white/15 dark:bg-pine-950/55 dark:text-pine-200/70 dark:hover:border-pine-400/60 dark:hover:bg-pine-900/75 dark:hover:text-cream"
         >
           {visiblePills.length === 0 ? (
             <>
@@ -166,7 +168,7 @@ export function ReplyEmojiReactions({
 
         {/* Floating Picker Popover */}
         {pickerOpen ? (
-          <div className="absolute bottom-full left-0 mb-1.5 z-20 flex items-center gap-1 rounded-2xl border border-pine-900/10 bg-white p-1.5 shadow-[0_8px_24px_-8px_rgba(7,37,28,.25)] animate-in fade-in zoom-in-95 duration-100">
+          <div className="animate-in fade-in zoom-in-95 absolute bottom-full left-0 z-20 mb-1.5 flex items-center gap-1 rounded-2xl border border-pine-900/10 bg-white p-1.5 shadow-[0_8px_24px_-8px_rgba(7,37,28,.25)] duration-100 dark:border-white/15 dark:bg-[#0e221b] dark:shadow-[0_12px_30px_-8px_rgba(0,0,0,.7)]">
             {REPLY_EMOJIS.map((option) => {
               const isActive = myReactions.includes(option.emoji);
 
@@ -178,8 +180,10 @@ export function ReplyEmojiReactions({
                   aria-pressed={isActive}
                   aria-label={option.label}
                   title={option.label}
-                  className={`flex h-8 w-8 items-center justify-center rounded-xl text-base transition hover:scale-125 hover:bg-pine-50 active:scale-100 ${
-                    isActive ? 'bg-pine-100 ring-1 ring-pine-500/30' : ''
+                  className={`flex h-8 w-8 items-center justify-center rounded-xl text-base transition hover:scale-125 hover:bg-pine-50 active:scale-100 dark:hover:bg-pine-800/70 ${
+                    isActive
+                      ? 'bg-pine-100 ring-1 ring-pine-500/30 dark:bg-pine-800 dark:ring-pine-400/50'
+                      : ''
                   }`}
                 >
                   <span role="img" aria-label={option.label}>
@@ -193,7 +197,9 @@ export function ReplyEmojiReactions({
       </div>
 
       {error ? (
-        <span className="ml-1 text-[0.66rem] font-semibold text-clay">{error}</span>
+        <span className="ml-1 text-[0.66rem] font-semibold text-clay dark:text-[#f6b8a0]">
+          {error}
+        </span>
       ) : null}
     </div>
   );

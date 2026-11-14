@@ -14,13 +14,13 @@ export function CommunityAuthGate({ children }: { children: ReactNode }) {
 
   if (status === 'loading') {
     return (
-      <div className="flex min-h-[22rem] items-center justify-center rounded-[1.8rem] border border-pine-900/8 bg-white/55 px-6 py-12">
+      <div className="flex min-h-[22rem] items-center justify-center rounded-[1.8rem] border border-pine-900/8 bg-white/55 px-6 py-12 dark:border-white/10 dark:bg-[#0e221b]/80">
         <div className="flex flex-col items-center gap-3 text-center">
           <span
-            className="h-8 w-8 animate-spin rounded-full border-2 border-pine-200 border-t-pine-600"
+            className="h-8 w-8 animate-spin rounded-full border-2 border-pine-200 border-t-pine-600 dark:border-pine-800 dark:border-t-pine-300"
             aria-hidden="true"
           />
-          <p className="text-[0.66rem] font-extrabold uppercase tracking-[0.16em] text-muted">
+          <p className="text-[0.66rem] font-extrabold uppercase tracking-[0.16em] text-muted dark:text-pine-200/70">
             Connecting to the community…
           </p>
         </div>
@@ -29,20 +29,20 @@ export function CommunityAuthGate({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="rounded-[1.8rem] border border-pine-900/10 bg-white/65 px-6 py-12 text-center">
-      <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-pine-100 text-pine-700">
+    <div className="rounded-[1.8rem] border border-pine-900/10 bg-white/65 px-6 py-12 text-center dark:border-white/10 dark:bg-[#0e221b]/85">
+      <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-pine-100 text-pine-700 dark:bg-pine-800/80 dark:text-pine-200">
         {configured ? (
           <WifiOff className="h-6 w-6" aria-hidden="true" />
         ) : (
           <ShieldCheck className="h-6 w-6" aria-hidden="true" />
         )}
       </span>
-      <h2 className="mt-4 font-display text-xl font-semibold text-pine-950">
+      <h2 className="mt-4 font-display text-xl font-semibold text-pine-950 dark:text-cream">
         {configured
           ? 'The community could not connect'
           : 'Community sign-in is not set up yet'}
       </h2>
-      <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted">
+      <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted dark:text-pine-200/70">
         {configured
           ? error ??
             'Check your connection and try again. The rest of Higala still works.'
@@ -53,7 +53,7 @@ export function CommunityAuthGate({ children }: { children: ReactNode }) {
           Try again
         </Button>
       ) : null}
-      <p className="mx-auto mt-4 max-w-md text-xs leading-relaxed text-muted/80">
+      <p className="mx-auto mt-4 max-w-md text-xs leading-relaxed text-muted/80 dark:text-pine-200/55">
         Your chats, moods, thought records, and safety plan stay on this device
         and are not affected.
       </p>

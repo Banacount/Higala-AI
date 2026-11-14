@@ -73,7 +73,9 @@ export function ToolkitPage() {
         title={
           <>
             Tools for{' '}
-            <span className="italic text-pine-600">hard moments.</span>
+            <span className="italic text-pine-600 dark:text-pine-300">
+              hard moments.
+            </span>
           </>
         }
         subtitle="Small, concrete tools for when your head is loud. No toxic positivity—just a next step you can actually take."
@@ -90,31 +92,37 @@ export function ToolkitPage() {
       />
 
       <div className="mb-4 grid gap-3 sm:grid-cols-3">
-        <div className="rounded-2xl border border-pine-900/8 bg-white/65 p-4">
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-pine-100 text-pine-700">
+        <div className="rounded-2xl border border-pine-900/8 bg-white/65 p-4 dark:border-white/10 dark:bg-[#0e221b]/80">
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-pine-100 text-pine-700 dark:bg-pine-800/80 dark:text-pine-200">
             <Sprout className="h-4 w-4" aria-hidden="true" />
           </span>
-          <p className="mt-2 text-xs font-bold text-pine-950">Start small</p>
-          <p className="mt-0.5 text-[0.68rem] leading-relaxed text-muted">
+          <p className="mt-2 text-xs font-bold text-pine-950 dark:text-cream">
+            Start small
+          </p>
+          <p className="mt-0.5 text-[0.68rem] leading-relaxed text-muted dark:text-pine-200/70">
             Pick the tool that matches your body, not the one that sounds most
             impressive.
           </p>
         </div>
-        <div className="rounded-2xl border border-pine-900/8 bg-white/65 p-4">
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-sun-soft text-[#8a6018]">
+        <div className="rounded-2xl border border-pine-900/8 bg-white/65 p-4 dark:border-white/10 dark:bg-[#0e221b]/80">
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-sun-soft text-[#8a6018] dark:bg-sun/15 dark:text-[#f2ca78]">
             <Sparkles className="h-4 w-4" aria-hidden="true" />
           </span>
-          <p className="mt-2 text-xs font-bold text-pine-950">No perfection</p>
-          <p className="mt-0.5 text-[0.68rem] leading-relaxed text-muted">
+          <p className="mt-2 text-xs font-bold text-pine-950 dark:text-cream">
+            No perfection
+          </p>
+          <p className="mt-0.5 text-[0.68rem] leading-relaxed text-muted dark:text-pine-200/70">
             A tool is not a test. Skip a step, stop early, come back later.
           </p>
         </div>
-        <div className="rounded-2xl border border-pine-900/8 bg-white/65 p-4">
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-clay-soft text-clay">
+        <div className="rounded-2xl border border-pine-900/8 bg-white/65 p-4 dark:border-white/10 dark:bg-[#0e221b]/80">
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-clay-soft text-clay dark:bg-clay/20 dark:text-[#f0a587]">
             <ShieldCheck className="h-4 w-4" aria-hidden="true" />
           </span>
-          <p className="mt-2 text-xs font-bold text-pine-950">Safety first</p>
-          <p className="mt-0.5 text-[0.68rem] leading-relaxed text-muted">
+          <p className="mt-2 text-xs font-bold text-pine-950 dark:text-cream">
+            Safety first
+          </p>
+          <p className="mt-0.5 text-[0.68rem] leading-relaxed text-muted dark:text-pine-200/70">
             If you cannot keep yourself safe, stop and call 911 or 1553.
           </p>
         </div>
@@ -129,13 +137,13 @@ export function ToolkitPage() {
         <ToolCard id="mood-check" />
       </div>
 
-      <div className="mt-6 flex flex-col gap-3 rounded-[1.5rem] border border-pine-200/70 bg-pine-50 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+      <div className="mt-6 flex flex-col gap-3 rounded-[1.5rem] border border-pine-200/70 bg-pine-50 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6 dark:border-pine-500/25 dark:bg-pine-900/65">
         <div>
           <Badge tone="mint">No tool fits right now?</Badge>
-          <h2 className="mt-2 font-display text-xl font-semibold text-pine-950">
+          <h2 className="mt-2 font-display text-xl font-semibold text-pine-950 dark:text-cream">
             Sometimes you just need to say it out loud.
           </h2>
-          <p className="mt-1 max-w-xl text-xs leading-relaxed text-muted">
+          <p className="mt-1 max-w-xl text-xs leading-relaxed text-muted dark:text-pine-200/75">
             Higala can listen, challenge the thought, or help you make one small
             plan. You do not need to be in a crisis to deserve support.
           </p>

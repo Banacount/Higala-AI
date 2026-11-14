@@ -16,6 +16,7 @@ import { useApp } from '@/context/AppContext';
 import { useAdminStatus } from '@/context/AdminStatusContext';
 import { Wordmark } from '@/components/BrandMark';
 import { CrisisModal } from '@/components/CrisisModal';
+import { ThemeSwitch } from '@/components/ThemeSwitch';
 import { initials } from '@/lib/utils';
 import { LANGUAGE_OPTIONS } from '@/lib/constants';
 
@@ -61,7 +62,7 @@ export function Sidebar() {
     LANGUAGE_OPTIONS[0];
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-40 hidden w-72 flex-col overflow-hidden bg-pine-950 text-cream lg:flex">
+    <aside className="fixed inset-y-0 left-0 z-40 hidden w-72 flex-col overflow-hidden bg-pine-950 text-cream dark:border-r dark:border-white/10 lg:flex">
       <div className="pointer-events-none absolute inset-0 bg-weave opacity-70" />
       <div className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-pine-500/20 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-28 -left-20 h-72 w-72 rounded-full bg-pine-400/10 blur-3xl" />
@@ -135,9 +136,11 @@ export function Sidebar() {
           </button>
         </div>
 
+        <ThemeSwitch surface="sidebar" className="mt-3" />
+
         <NavLink
           to="/settings"
-          className="mt-3 flex items-center gap-2.5 rounded-2xl px-2 py-2 text-pine-100/75 transition hover:bg-white/[0.055] hover:text-cream"
+          className="mt-2 flex items-center gap-2.5 rounded-2xl px-2 py-2 text-pine-100/75 transition hover:bg-white/[0.055] hover:text-cream"
         >
           <span className="flex h-9 w-9 items-center justify-center rounded-full bg-pine-300/15 text-[0.68rem] font-extrabold text-pine-200">
             {initials(profile.name)}
@@ -172,15 +175,16 @@ export function MobileTopBar() {
   const { openCrisis } = useApp();
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-pine-900/8 bg-cream px-4 lg:hidden">
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-pine-900/8 bg-cream/95 px-4 backdrop-blur-sm dark:border-white/10 dark:bg-[#081611]/95 lg:hidden">
       <NavLink to="/" aria-label="Higala home">
         <Wordmark compact />
       </NavLink>
       <div className="flex items-center gap-2">
+        <ThemeSwitch compact />
         <NavLink
           to="/settings"
           aria-label="Settings"
-          className="flex h-9 w-9 items-center justify-center rounded-full border border-pine-900/10 bg-white/60 text-pine-800"
+          className="flex h-9 w-9 items-center justify-center rounded-full border border-pine-900/10 bg-white/60 text-pine-800 dark:border-white/12 dark:bg-white/[0.06] dark:text-pine-100"
         >
           <Settings2 className="h-4 w-4" aria-hidden="true" />
         </NavLink>
@@ -188,7 +192,7 @@ export function MobileTopBar() {
           type="button"
           onClick={openCrisis}
           aria-label="Get crisis help"
-          className="flex h-9 items-center gap-1.5 rounded-full bg-pine-900 px-3.5 text-[0.68rem] font-bold text-cream"
+          className="flex h-9 items-center gap-1.5 rounded-full bg-pine-900 px-3.5 text-[0.68rem] font-bold text-cream dark:bg-pine-500 dark:text-pine-950"
         >
           <LifeBuoy className="h-3.5 w-3.5" aria-hidden="true" />
           Help
@@ -231,7 +235,7 @@ export function MobileNav() {
   return (
     <nav
       aria-label="Mobile navigation"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-pine-900/10 bg-cream pb-safe lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-pine-900/10 bg-cream/95 pb-safe backdrop-blur-sm dark:border-white/10 dark:bg-[#081611]/95 lg:hidden"
     >
       <div className="grid grid-cols-6 px-2 pt-1.5">
         {MOBILE_ITEMS.map((item) => (
@@ -242,8 +246,8 @@ export function MobileNav() {
             className={({ isActive }) =>
               `flex flex-col items-center gap-0.5 rounded-xl px-1 py-1 text-[0.58rem] font-bold transition-colors ${
                 isActive
-                  ? 'text-pine-900'
-                  : 'text-muted hover:text-pine-800'
+                  ? 'text-pine-900 dark:text-pine-200'
+                  : 'text-muted hover:text-pine-800 dark:text-pine-200/55 dark:hover:text-pine-100'
               }`
             }
           >
@@ -251,7 +255,9 @@ export function MobileNav() {
               <>
                 <span
                   className={`flex h-7 w-9 items-center justify-center rounded-full transition-colors ${
-                    isActive ? 'bg-pine-100 text-pine-800' : 'text-muted'
+                    isActive
+                      ? 'bg-pine-100 text-pine-800 dark:bg-pine-800/80 dark:text-pine-100'
+                      : 'text-muted dark:text-pine-200/55'
                   }`}
                 >
                   <item.icon className="h-[1.05rem] w-[1.05rem]" aria-hidden="true" />

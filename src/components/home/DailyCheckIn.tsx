@@ -20,24 +20,24 @@ export function DailyCheckIn() {
   const checkedThisWeek = week.filter((day) => byDate.has(day)).length;
 
   return (
-    <section className="rounded-[1.55rem] border border-pine-900/8 bg-white/75 p-5 sm:p-6">
+    <section className="rounded-[1.55rem] border border-pine-900/8 bg-white/75 p-5 dark:border-white/10 dark:bg-[#0e221b]/85 sm:p-6">
       <div className="flex flex-col gap-6 lg:flex-row lg:items-stretch lg:gap-8">
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-[0.6rem] font-extrabold uppercase tracking-[0.16em] text-pine-600">
+              <p className="text-[0.6rem] font-extrabold uppercase tracking-[0.16em] text-pine-600 dark:text-pine-300">
                 Daily check-in
               </p>
-              <h2 className="mt-1 font-display text-[1.5rem] font-semibold leading-tight text-pine-950">
+              <h2 className="mt-1 font-display text-[1.5rem] font-semibold leading-tight text-pine-950 dark:text-cream">
                 How are you feeling?
               </h2>
-              <p className="mt-1 text-xs leading-relaxed text-muted">
+              <p className="mt-1 text-xs leading-relaxed text-muted dark:text-pine-200/70">
                 No wrong answer. Just the honest one.
               </p>
             </div>
             <Link
               to="/mood"
-              className="inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-[0.62rem] font-bold uppercase tracking-[0.1em] text-pine-700 transition hover:bg-pine-50"
+              className="inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-[0.62rem] font-bold uppercase tracking-[0.1em] text-pine-700 transition hover:bg-pine-50 dark:text-pine-300 dark:hover:bg-white/[0.08]"
             >
               History
               <ArrowUpRight className="h-3 w-3" aria-hidden="true" />
@@ -57,8 +57,8 @@ export function DailyCheckIn() {
                   aria-label={`${mood.label} — ${mood.sublabel}`}
                   className={`group flex flex-col items-center gap-1 rounded-2xl border px-1 py-2 transition duration-200 ${
                     selected
-                      ? 'border-pine-400 bg-pine-50 shadow-sm'
-                      : 'border-transparent bg-pine-900/[0.025] hover:-translate-y-0.5 hover:border-pine-200 hover:bg-pine-50'
+                      ? 'border-pine-400 bg-pine-50 shadow-sm dark:border-pine-400/60 dark:bg-pine-800/55'
+                      : 'border-transparent bg-pine-900/[0.025] hover:-translate-y-0.5 hover:border-pine-200 hover:bg-pine-50 dark:bg-white/[0.04] dark:hover:border-pine-500/40 dark:hover:bg-white/[0.08]'
                   }`}
                 >
                   <MoodFace
@@ -68,7 +68,9 @@ export function DailyCheckIn() {
                   />
                   <span
                     className={`text-[0.58rem] font-bold leading-tight ${
-                      selected ? 'text-pine-900' : 'text-pine-950/70'
+                      selected
+                        ? 'text-pine-900 dark:text-cream'
+                        : 'text-pine-950/70 dark:text-pine-100/80'
                     }`}
                   >
                     {mood.label}
@@ -78,41 +80,41 @@ export function DailyCheckIn() {
             })}
           </div>
 
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-pine-900/6 pt-3">
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-pine-900/6 pt-3 dark:border-white/10">
             {savedToday ? (
-              <span className="inline-flex items-center gap-1.5 text-[0.68rem] font-semibold text-pine-700">
+              <span className="inline-flex items-center gap-1.5 text-[0.68rem] font-semibold text-pine-700 dark:text-pine-300">
                 <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
                 Logged. Thank you for being honest.
               </span>
             ) : (
-              <span className="text-[0.68rem] font-medium text-muted/70">
+              <span className="text-[0.68rem] font-medium text-muted/70 dark:text-pine-200/60">
                 One tap is enough to start.
               </span>
             )}
             <Link
               to="/mood"
-              className="text-[0.64rem] font-extrabold uppercase tracking-[0.1em] text-pine-600 underline-offset-2 hover:underline"
+              className="text-[0.64rem] font-extrabold uppercase tracking-[0.1em] text-pine-600 underline-offset-2 hover:underline dark:text-pine-300"
             >
               {savedToday ? 'Add a note' : 'Open check-in'}
             </Link>
           </div>
         </div>
 
-        <div className="shrink-0 lg:w-[17rem] lg:border-l lg:border-pine-900/8 lg:pl-8">
-          <p className="text-[0.6rem] font-extrabold uppercase tracking-[0.16em] text-pine-600">
+        <div className="shrink-0 lg:w-[17rem] lg:border-l lg:border-pine-900/8 lg:pl-8 dark:lg:border-white/10">
+          <p className="text-[0.6rem] font-extrabold uppercase tracking-[0.16em] text-pine-600 dark:text-pine-300">
             This week
           </p>
 
           <div className="mt-2 flex items-end gap-2">
-            <span className="font-display text-4xl font-semibold leading-none text-pine-900">
+            <span className="font-display text-4xl font-semibold leading-none text-pine-900 dark:text-cream">
               {streak}
             </span>
-            <span className="pb-0.5 text-[0.62rem] leading-tight text-pine-900/55">
+            <span className="pb-0.5 text-[0.62rem] leading-tight text-pine-900/55 dark:text-pine-200/60">
               {streak === 1 ? 'day' : 'days'}
               <br />
               showing up
             </span>
-            <span className="ml-auto rounded-full bg-pine-100 px-2 py-1 text-[0.55rem] font-extrabold uppercase tracking-[0.08em] text-pine-700">
+            <span className="ml-auto rounded-full bg-pine-100 px-2 py-1 text-[0.55rem] font-extrabold uppercase tracking-[0.08em] text-pine-700 dark:bg-pine-900/75 dark:text-pine-200">
               {checkedThisWeek}/7
             </span>
           </div>
@@ -126,19 +128,19 @@ export function DailyCheckIn() {
               return (
                 <div key={day} className="flex flex-col items-center gap-1">
                   <div
-                    className={`flex h-7 w-7 items-center justify-center rounded-full border bg-white/60 ${
+                    className={`flex h-7 w-7 items-center justify-center rounded-full border bg-white/60 dark:bg-white/[0.05] ${
                       day === today
-                        ? 'border-pine-300'
-                        : 'border-pine-900/8'
+                        ? 'border-pine-300 dark:border-pine-400/60'
+                        : 'border-pine-900/8 dark:border-white/10'
                     }`}
                   >
                     {entry ? (
                       <MoodFace level={entry.level} size={20} />
                     ) : (
-                      <span className="h-1 w-1 rounded-full bg-pine-900/15" />
+                      <span className="h-1 w-1 rounded-full bg-pine-900/15 dark:bg-white/25" />
                     )}
                   </div>
-                  <span className="text-[0.48rem] font-bold uppercase tracking-[0.04em] text-pine-900/40">
+                  <span className="text-[0.48rem] font-bold uppercase tracking-[0.04em] text-pine-900/40 dark:text-pine-200/50">
                     {weekday}
                   </span>
                 </div>
@@ -146,7 +148,7 @@ export function DailyCheckIn() {
             })}
           </div>
 
-          <p className="mt-3 text-[0.68rem] leading-relaxed text-muted">
+          <p className="mt-3 text-[0.68rem] leading-relaxed text-muted dark:text-pine-200/70">
             {streak > 0
               ? `This week, you checked in on ${checkedThisWeek} ${checkedThisWeek === 1 ? 'day' : 'days'}.`
               : 'Start today. One honest check-in is enough.'}

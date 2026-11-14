@@ -87,7 +87,9 @@ export function MoodPage() {
         title={
           <>
             How are you actually{' '}
-            <span className="italic text-pine-600">feeling?</span>
+            <span className="italic text-pine-600 dark:text-pine-300">
+              feeling?
+            </span>
           </>
         }
         subtitle="Not the answer you think you should give. The honest one. Your check-ins stay on this device and help you see patterns you would otherwise miss."
@@ -104,17 +106,17 @@ export function MoodPage() {
       />
 
       <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
-        <section className="rounded-[1.6rem] border border-pine-900/8 bg-white/75 p-5 shadow-lift sm:p-6">
+        <section className="rounded-[1.6rem] border border-pine-900/8 bg-white/75 p-5 shadow-lift sm:p-6 dark:border-white/10 dark:bg-[#0e221b]/90">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <p className="flex items-center gap-1.5 text-[0.6rem] font-extrabold uppercase tracking-[0.18em] text-pine-600">
+              <p className="flex items-center gap-1.5 text-[0.6rem] font-extrabold uppercase tracking-[0.18em] text-pine-600 dark:text-pine-300">
                 <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />
                 {formatLongDate()}
               </p>
-              <h2 className="mt-1 font-display text-[1.6rem] font-semibold leading-tight text-pine-950">
+              <h2 className="mt-1 font-display text-[1.6rem] font-semibold leading-tight text-pine-950 dark:text-cream">
                 How are you feeling right now?
               </h2>
-              <p className="mt-1 text-xs leading-relaxed text-muted">
+              <p className="mt-1 text-xs leading-relaxed text-muted dark:text-pine-200/70">
                 Pick the face that is closest. You can change it any time.
               </p>
             </div>
@@ -141,8 +143,8 @@ export function MoodPage() {
                   aria-label={`${mood.label} — ${mood.sublabel}`}
                   className={`group flex flex-col items-center gap-1 rounded-2xl border px-1 py-2.5 transition duration-200 ${
                     selected
-                      ? 'border-pine-400 bg-pine-50 shadow-sm'
-                      : 'border-pine-900/8 bg-white/45 hover:-translate-y-0.5 hover:border-pine-200 hover:bg-pine-50'
+                      ? 'border-pine-400 bg-pine-50 shadow-sm dark:border-pine-400/70 dark:bg-pine-800/70'
+                      : 'border-pine-900/8 bg-white/45 hover:-translate-y-0.5 hover:border-pine-200 hover:bg-pine-50 dark:border-white/10 dark:bg-pine-950/55 dark:hover:border-pine-500/40 dark:hover:bg-pine-900/70'
                   }`}
                 >
                   <MoodFace
@@ -150,10 +152,10 @@ export function MoodPage() {
                     size={44}
                     className="transition-transform duration-200 group-hover:scale-105"
                   />
-                  <span className="text-[0.58rem] font-bold leading-tight text-pine-950/80">
+                  <span className="text-[0.58rem] font-bold leading-tight text-pine-950/80 dark:text-cream/90">
                     {mood.label}
                   </span>
-                  <span className="text-[0.46rem] font-extrabold uppercase tracking-[0.06em] text-muted/55">
+                  <span className="text-[0.46rem] font-extrabold uppercase tracking-[0.06em] text-muted/55 dark:text-pine-200/50">
                     {mood.sublabel}
                   </span>
                 </button>
@@ -161,11 +163,11 @@ export function MoodPage() {
             })}
           </div>
 
-          <div className="mt-5 border-t border-pine-900/6 pt-4">
-            <p className="text-[0.62rem] font-extrabold uppercase tracking-[0.12em] text-pine-700">
+          <div className="mt-5 border-t border-pine-900/6 pt-4 dark:border-white/10">
+            <p className="text-[0.62rem] font-extrabold uppercase tracking-[0.12em] text-pine-700 dark:text-pine-300">
               What’s affecting it?
             </p>
-            <p className="mb-2 mt-0.5 text-[0.68rem] leading-relaxed text-muted">
+            <p className="mb-2 mt-0.5 text-[0.68rem] leading-relaxed text-muted dark:text-pine-200/65">
               Optional. Tags make patterns visible later.
             </p>
             <div className="flex flex-wrap gap-1.5">
@@ -179,8 +181,8 @@ export function MoodPage() {
                     aria-pressed={selected}
                     className={`rounded-full border px-2.5 py-1.5 text-[0.66rem] font-bold transition ${
                       selected
-                        ? 'border-pine-600 bg-pine-900 text-cream'
-                        : 'border-pine-900/10 bg-white/65 text-pine-800 hover:border-pine-300 hover:bg-pine-50'
+                        ? 'border-pine-600 bg-pine-900 text-cream dark:border-pine-400 dark:bg-pine-600 dark:text-white'
+                        : 'border-pine-900/10 bg-white/65 text-pine-800 hover:border-pine-300 hover:bg-pine-50 dark:border-white/10 dark:bg-pine-950/60 dark:text-pine-100 dark:hover:border-pine-400/50 dark:hover:bg-pine-900/70'
                     }`}
                   >
                     {tag}
@@ -190,14 +192,14 @@ export function MoodPage() {
             </div>
           </div>
 
-          <div className="mt-5 border-t border-pine-900/6 pt-4">
+          <div className="mt-5 border-t border-pine-900/6 pt-4 dark:border-white/10">
             <label
               htmlFor="mood-note"
-              className="text-[0.62rem] font-extrabold uppercase tracking-[0.12em] text-pine-700"
+              className="text-[0.62rem] font-extrabold uppercase tracking-[0.12em] text-pine-700 dark:text-pine-300"
             >
               Want to say more?
             </label>
-            <p className="mb-1.5 mt-0.5 text-[0.68rem] leading-relaxed text-muted">
+            <p className="mb-1.5 mt-0.5 text-[0.68rem] leading-relaxed text-muted dark:text-pine-200/65">
               A sentence is enough. No one else will read this.
             </p>
             <textarea
@@ -208,21 +210,21 @@ export function MoodPage() {
               }
               rows={3}
               placeholder="e.g. I feel exhausted for no clear reason. I’m frustrated that I’m not making progress."
-              className="w-full resize-none rounded-xl border border-pine-900/10 bg-white/70 px-3 py-2.5 text-sm leading-relaxed text-ink outline-none transition placeholder:text-muted/40 focus:border-pine-400 focus:bg-white"
+              className="w-full resize-none rounded-xl border border-pine-900/10 bg-white/70 px-3 py-2.5 text-sm leading-relaxed text-ink outline-none transition placeholder:text-muted/40 focus:border-pine-400 focus:bg-white dark:border-white/12 dark:bg-pine-950/75 dark:text-cream dark:placeholder:text-pine-200/40 dark:focus:border-pine-400 dark:focus:bg-pine-950"
             />
-            <p className="mt-1 text-right text-[0.58rem] font-semibold text-muted/50">
+            <p className="mt-1 text-right text-[0.58rem] font-semibold text-muted/50 dark:text-pine-200/45">
               {note.length}/1200
             </p>
           </div>
 
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-pine-900/6 pt-3">
-            <p className="inline-flex items-center gap-1.5 text-[0.64rem] font-semibold text-muted">
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-pine-900/6 pt-3 dark:border-white/10">
+            <p className="inline-flex items-center gap-1.5 text-[0.64rem] font-semibold text-muted dark:text-pine-200/65">
               <LockKeyhole className="h-3.5 w-3.5" aria-hidden="true" />
               Saved only on this device
             </p>
             <Link
               to="/toolkit?tool=thought-record"
-              className="inline-flex items-center gap-1 text-[0.64rem] font-extrabold uppercase tracking-[0.1em] text-pine-700 transition hover:text-pine-900"
+              className="inline-flex items-center gap-1 text-[0.64rem] font-extrabold uppercase tracking-[0.1em] text-pine-700 transition hover:text-pine-900 dark:text-pine-300 dark:hover:text-pine-200"
             >
               Go deeper
               <ArrowRight className="h-3 w-3" aria-hidden="true" />
@@ -231,7 +233,7 @@ export function MoodPage() {
         </section>
 
         <div className="space-y-3">
-          <section className="relative overflow-hidden rounded-[1.6rem] bg-pine-950 p-5 text-cream shadow-soft sm:p-6">
+          <section className="relative overflow-hidden rounded-[1.6rem] bg-pine-950 p-5 text-cream shadow-soft sm:p-6 dark:border dark:border-white/10">
             <div className="pointer-events-none absolute inset-0 bg-weave opacity-60" />
             <div className="pointer-events-none absolute -right-12 -top-16 h-48 w-48 rounded-full bg-pine-500/20 blur-3xl" />
 
@@ -310,12 +312,12 @@ export function MoodPage() {
             </p>
           </section>
 
-          <div className="rounded-2xl border border-pine-200/70 bg-pine-50 p-4">
-            <p className="flex items-center gap-2 text-xs font-bold text-pine-900">
-              <Sparkles className="h-3.5 w-3.5 text-pine-600" aria-hidden="true" />
+          <div className="rounded-2xl border border-pine-200/70 bg-pine-50 p-4 dark:border-pine-500/25 dark:bg-pine-900/65">
+            <p className="flex items-center gap-2 text-xs font-bold text-pine-900 dark:text-cream">
+              <Sparkles className="h-3.5 w-3.5 text-pine-600 dark:text-pine-300" aria-hidden="true" />
               Honest read on this week
             </p>
-            <p className="mt-1.5 text-[0.7rem] leading-relaxed text-pine-900/65">
+            <p className="mt-1.5 text-[0.7rem] leading-relaxed text-pine-900/65 dark:text-pine-100/75">
               {insightFor(weekAverage)}
             </p>
           </div>
@@ -325,25 +327,25 @@ export function MoodPage() {
       <section className="mt-7">
         <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
           <div>
-            <p className="text-[0.6rem] font-extrabold uppercase tracking-[0.18em] text-pine-600">
+            <p className="text-[0.6rem] font-extrabold uppercase tracking-[0.18em] text-pine-600 dark:text-pine-300">
               History
             </p>
-            <h2 className="mt-1 font-display text-[1.55rem] font-semibold leading-tight text-pine-950">
+            <h2 className="mt-1 font-display text-[1.55rem] font-semibold leading-tight text-pine-950 dark:text-cream">
               All check-ins.
             </h2>
           </div>
-          <span className="rounded-full border border-pine-900/10 bg-white/60 px-3 py-1.5 text-[0.6rem] font-extrabold uppercase tracking-[0.1em] text-pine-700">
+          <span className="rounded-full border border-pine-900/10 bg-white/60 px-3 py-1.5 text-[0.6rem] font-extrabold uppercase tracking-[0.1em] text-pine-700 dark:border-white/10 dark:bg-pine-900/70 dark:text-pine-200">
             {moodEntries.length} saved
           </span>
         </div>
 
         {history.length === 0 ? (
-          <div className="rounded-[1.4rem] border border-dashed border-pine-300 bg-white/45 p-8 text-center">
+          <div className="rounded-[1.4rem] border border-dashed border-pine-300 bg-white/45 p-8 text-center dark:border-pine-500/35 dark:bg-[#0e221b]/65">
             <MoodFace level={3} size={52} className="mx-auto" />
-            <p className="mt-3 font-display text-lg font-semibold text-pine-950">
+            <p className="mt-3 font-display text-lg font-semibold text-pine-950 dark:text-cream">
               No check-ins yet.
             </p>
-            <p className="mx-auto mt-1 max-w-md text-xs leading-relaxed text-muted">
+            <p className="mx-auto mt-1 max-w-md text-xs leading-relaxed text-muted dark:text-pine-200/70">
               Your first honest check-in will appear here. Pick a face above—not
               the “right” one, the true one.
             </p>
@@ -356,15 +358,15 @@ export function MoodPage() {
               return (
                 <article
                   key={entry.date}
-                  className="flex flex-col gap-3 rounded-2xl border border-pine-900/8 bg-white/65 p-4 sm:flex-row sm:items-start"
+                  className="flex flex-col gap-3 rounded-2xl border border-pine-900/8 bg-white/65 p-4 sm:flex-row sm:items-start dark:border-white/10 dark:bg-[#0e221b]/80"
                 >
                   <div className="flex shrink-0 items-center gap-3 sm:w-40">
                     <MoodFace level={entry.level} size={40} />
                     <div className="min-w-0">
-                      <p className="flex items-center gap-1.5 text-[0.68rem] font-extrabold uppercase tracking-[0.1em] text-pine-700">
+                      <p className="flex items-center gap-1.5 text-[0.68rem] font-extrabold uppercase tracking-[0.1em] text-pine-700 dark:text-pine-300">
                         {isToday ? 'Today' : formatShortDate(entry.date)}
                       </p>
-                      <p className="text-[0.62rem] text-muted">
+                      <p className="text-[0.62rem] text-muted dark:text-pine-200/65">
                         {formatWeekday(entry.date)} · {mood.label}
                       </p>
                     </div>
@@ -376,7 +378,7 @@ export function MoodPage() {
                         {entry.tags.map((tag) => (
                           <span
                             key={tag}
-                            className="rounded-full bg-pine-100 px-2 py-0.5 text-[0.56rem] font-bold text-pine-800"
+                            className="rounded-full bg-pine-100 px-2 py-0.5 text-[0.56rem] font-bold text-pine-800 dark:bg-pine-800/80 dark:text-pine-200"
                           >
                             {tag}
                           </span>
@@ -384,11 +386,11 @@ export function MoodPage() {
                       </div>
                     ) : null}
                     {entry.note ? (
-                      <p className="mt-1.5 whitespace-pre-wrap text-xs leading-relaxed text-pine-950/75">
+                      <p className="mt-1.5 whitespace-pre-wrap text-xs leading-relaxed text-pine-950/75 dark:text-pine-100/85">
                         {entry.note}
                       </p>
                     ) : (
-                      <p className="mt-0.5 text-[0.66rem] italic text-muted/55">
+                      <p className="mt-0.5 text-[0.66rem] italic text-muted/55 dark:text-pine-200/45">
                         No note. The check-in still counts.
                       </p>
                     )}
@@ -398,7 +400,7 @@ export function MoodPage() {
                     type="button"
                     onClick={() => remove(entry.date)}
                     aria-label={`Delete check-in for ${formatShortDate(entry.date)}`}
-                    className="flex h-8 w-8 shrink-0 items-center justify-center self-start rounded-full text-muted/50 transition hover:bg-clay-soft hover:text-clay"
+                    className="flex h-8 w-8 shrink-0 items-center justify-center self-start rounded-full text-muted/50 transition hover:bg-clay-soft hover:text-clay dark:text-pine-200/50 dark:hover:bg-clay/20 dark:hover:text-[#f0a587]"
                   >
                     <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                   </button>

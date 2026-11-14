@@ -17,13 +17,13 @@ export function HomePage() {
   return (
     <PageShell>
       <div className="mb-3 flex items-center justify-between gap-3">
-        <p className="text-[0.6rem] font-extrabold uppercase tracking-[0.16em] text-pine-600/75">
+        <p className="text-[0.6rem] font-extrabold uppercase tracking-[0.16em] text-pine-600/75 dark:text-pine-300/80">
           Home · {formatLongDate()}
         </p>
         <button
           type="button"
           onClick={openCrisis}
-          className="inline-flex items-center gap-1.5 rounded-full border border-pine-900/10 bg-white/55 px-3 py-1.5 text-[0.62rem] font-bold uppercase tracking-[0.09em] text-pine-700 transition hover:bg-white"
+          className="inline-flex items-center gap-1.5 rounded-full border border-pine-900/10 bg-white/55 px-3 py-1.5 text-[0.62rem] font-bold uppercase tracking-[0.09em] text-pine-700 transition hover:bg-white dark:border-white/12 dark:bg-white/[0.06] dark:text-pine-200 dark:hover:bg-white/[0.11]"
         >
           <LifeBuoy className="h-3.5 w-3.5" aria-hidden="true" />
           Crisis help

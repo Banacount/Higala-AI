@@ -8,6 +8,7 @@ import {
   Loader2,
   LockKeyhole,
   MessageCircle,
+  Moon,
   ShieldCheck,
   Sparkles,
   Trash2,
@@ -17,6 +18,7 @@ import {
 import { STORAGE_KEYS, useApp } from '@/context/AppContext';
 import { useAuth } from '@/context/AuthContext';
 import { PageHeader, PageShell, SafetyFooter } from '@/components/PageShell';
+import { ThemePreferenceSelector } from '@/components/ThemeSwitch';
 import { Badge } from '@/components/ui/Badge';
 import { Button, buttonStyles } from '@/components/ui/Button';
 import { LANGUAGE_OPTIONS } from '@/lib/constants';
@@ -46,16 +48,16 @@ function SettingCard({
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-[1.5rem] border border-pine-900/8 bg-white/72 p-5 shadow-lift sm:p-6">
+    <section className="rounded-[1.5rem] border border-pine-900/8 bg-white/72 p-5 shadow-lift dark:border-white/10 dark:bg-[#0e221b]/85 sm:p-6">
       <div className="flex items-start gap-3">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-pine-100 text-pine-700">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-pine-100 text-pine-700 dark:bg-pine-900/80 dark:text-pine-300">
           {icon}
         </span>
         <div>
-          <h2 className="font-display text-xl font-semibold leading-tight text-pine-950">
+          <h2 className="font-display text-xl font-semibold leading-tight text-pine-950 dark:text-cream">
             {title}
           </h2>
-          <p className="mt-0.5 text-[0.7rem] leading-relaxed text-muted">
+          <p className="mt-0.5 text-[0.7rem] leading-relaxed text-muted dark:text-pine-200/70">
             {description}
           </p>
         </div>
@@ -75,15 +77,15 @@ function Stat({
   hint?: string;
 }) {
   return (
-    <div className="rounded-xl border border-pine-900/6 bg-cream/70 p-3">
-      <p className="font-display text-2xl font-semibold leading-none text-pine-900">
+    <div className="rounded-xl border border-pine-900/6 bg-cream/70 p-3 dark:border-white/10 dark:bg-pine-950/60">
+      <p className="font-display text-2xl font-semibold leading-none text-pine-900 dark:text-cream">
         {value}
       </p>
-      <p className="mt-1 text-[0.56rem] font-extrabold uppercase tracking-[0.1em] text-pine-600">
+      <p className="mt-1 text-[0.56rem] font-extrabold uppercase tracking-[0.1em] text-pine-600 dark:text-pine-300">
         {label}
       </p>
       {hint ? (
-        <p className="mt-0.5 text-[0.56rem] leading-relaxed text-muted/60">
+        <p className="mt-0.5 text-[0.56rem] leading-relaxed text-muted/60 dark:text-pine-200/55">
           {hint}
         </p>
       ) : null}
@@ -247,7 +249,9 @@ export function SettingsPage() {
         title={
           <>
             You and your{' '}
-            <span className="italic text-pine-600">data.</span>
+            <span className="italic text-pine-600 dark:text-pine-300">
+              data.
+            </span>
           </>
         }
         subtitle="Change how Higala speaks to you, see what is stored on this device, or clear it. Your data is yours—handle it that way."
@@ -263,7 +267,7 @@ export function SettingsPage() {
       />
 
       {notice ? (
-        <div className="mb-4 flex items-start gap-2 rounded-xl border border-pine-200 bg-pine-50 px-3.5 py-2.5 text-xs font-semibold text-pine-800">
+        <div className="mb-4 flex items-start gap-2 rounded-xl border border-pine-200 bg-pine-50 px-3.5 py-2.5 text-xs font-semibold text-pine-800 dark:border-pine-500/30 dark:bg-pine-900/60 dark:text-pine-100">
           <Check className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
           <span>{notice}</span>
         </div>
@@ -272,19 +276,27 @@ export function SettingsPage() {
       <div className="grid gap-4 lg:grid-cols-[1.05fr_0.95fr]">
         <div className="space-y-4">
           <SettingCard
+            icon={<Moon className="h-5 w-5" aria-hidden="true" />}
+            title="Appearance"
+            description="Adapts automatically to your browser’s dark mode preference, or pin Light or Dark any time."
+          >
+            <ThemePreferenceSelector />
+          </SettingCard>
+
+          <SettingCard
             icon={<UserRound className="h-5 w-5" aria-hidden="true" />}
             title="How should Higala call you?"
             description="A first name or a nickname. Nothing needs to be real."
           >
-            <div className="flex items-center gap-3 rounded-xl border border-pine-900/6 bg-cream/65 p-3">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-pine-900 text-xs font-extrabold text-cream">
+            <div className="flex items-center gap-3 rounded-xl border border-pine-900/6 bg-cream/65 p-3 dark:border-white/10 dark:bg-pine-950/60">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-pine-900 text-xs font-extrabold text-cream dark:bg-pine-500 dark:text-pine-950">
                 {initials(profile.name)}
               </span>
               <div className="min-w-0">
-                <p className="truncate text-xs font-bold text-pine-950">
+                <p className="truncate text-xs font-bold text-pine-950 dark:text-cream">
                   {profile.name.trim() || 'New friend'}
                 </p>
-                <p className="text-[0.6rem] text-muted">
+                <p className="text-[0.6rem] text-muted dark:text-pine-200/65">
                   Local profile · no account needed
                 </p>
               </div>
@@ -292,7 +304,7 @@ export function SettingsPage() {
 
             <label
               htmlFor="settings-name"
-              className="mt-4 block text-[0.62rem] font-extrabold uppercase tracking-[0.12em] text-pine-700"
+              className="mt-4 block text-[0.62rem] font-extrabold uppercase tracking-[0.12em] text-pine-700 dark:text-pine-300"
             >
               What should I call you?
             </label>
@@ -302,10 +314,10 @@ export function SettingsPage() {
               onChange={(event) => setName(event.target.value.slice(0, 60))}
               placeholder="e.g. Sam, Alex, or your nickname"
               autoComplete="off"
-              className="mt-1.5 w-full rounded-xl border border-pine-900/10 bg-white/70 px-3 py-2.5 text-sm text-ink outline-none transition placeholder:text-muted/40 focus:border-pine-400 focus:bg-white"
+              className="mt-1.5 w-full rounded-xl border border-pine-900/10 bg-white/70 px-3 py-2.5 text-sm text-ink outline-none transition placeholder:text-muted/40 focus:border-pine-400 focus:bg-white dark:border-white/12 dark:bg-pine-950/70 dark:text-cream dark:placeholder:text-pine-200/40 dark:focus:border-pine-400 dark:focus:bg-pine-950"
             />
 
-            <p className="mt-4 text-[0.62rem] font-extrabold uppercase tracking-[0.12em] text-pine-700">
+            <p className="mt-4 text-[0.62rem] font-extrabold uppercase tracking-[0.12em] text-pine-700 dark:text-pine-300">
               Language
             </p>
             <div className="mt-2 grid grid-cols-3 gap-1.5">
@@ -319,8 +331,8 @@ export function SettingsPage() {
                     aria-pressed={selected}
                     className={`rounded-xl border px-2 py-2.5 text-center transition ${
                       selected
-                        ? 'border-pine-600 bg-pine-900 text-cream'
-                        : 'border-pine-900/10 bg-white/65 text-pine-800 hover:border-pine-300 hover:bg-pine-50'
+                        ? 'border-pine-600 bg-pine-900 text-cream dark:border-pine-400/60 dark:bg-pine-800'
+                        : 'border-pine-900/10 bg-white/65 text-pine-800 hover:border-pine-300 hover:bg-pine-50 dark:border-white/10 dark:bg-white/[0.04] dark:text-pine-100 dark:hover:border-pine-400/40 dark:hover:bg-white/[0.08]'
                     }`}
                   >
                     <span className="block text-xs font-bold">
@@ -328,7 +340,9 @@ export function SettingsPage() {
                     </span>
                     <span
                       className={`mt-0.5 block text-[0.52rem] font-bold uppercase tracking-[0.06em] ${
-                        selected ? 'text-pine-200/70' : 'text-muted/60'
+                        selected
+                          ? 'text-pine-200/70'
+                          : 'text-muted/60 dark:text-pine-200/50'
                       }`}
                     >
                       {option.description}
@@ -337,7 +351,7 @@ export function SettingsPage() {
                 );
               })}
             </div>
-            <p className="mt-2 text-[0.65rem] leading-relaxed text-muted">
+            <p className="mt-2 text-[0.65rem] leading-relaxed text-muted dark:text-pine-200/65">
               Higala replies in this language. You can switch between English,
               Bisaya, and Tagalog anytime.
             </p>
@@ -397,7 +411,7 @@ export function SettingsPage() {
               </Button>
             </div>
 
-            <p className="mt-3 text-[0.65rem] leading-relaxed text-muted">
+            <p className="mt-3 text-[0.65rem] leading-relaxed text-muted dark:text-pine-200/65">
               {totalRecords === 0
                 ? 'Nothing is stored yet. Start with one honest check-in whenever you are ready.'
                 : `${totalRecords} local record${totalRecords === 1 ? '' : 's'} across check-ins, thoughts, chat, and your safety plan.`}
@@ -415,12 +429,12 @@ export function SettingsPage() {
               {PRIVACY_POINTS.map((point) => (
                 <div
                   key={point.title}
-                  className="rounded-xl border border-pine-900/6 bg-cream/65 p-3.5"
+                  className="rounded-xl border border-pine-900/6 bg-cream/65 p-3.5 dark:border-white/10 dark:bg-pine-950/60"
                 >
-                  <p className="text-xs font-bold text-pine-900">
+                  <p className="text-xs font-bold text-pine-900 dark:text-pine-100">
                     {point.title}
                   </p>
-                  <p className="mt-1 text-[0.68rem] leading-relaxed text-muted">
+                  <p className="mt-1 text-[0.68rem] leading-relaxed text-muted dark:text-pine-200/70">
                     {point.body}
                   </p>
                 </div>
@@ -433,8 +447,8 @@ export function SettingsPage() {
             title="Anonymous Sharing data"
             description="Posts and reports you sent to the community live on Higala’s server, linked only to a random anonymous ID. Your local profile is never attached."
           >
-            <div className="rounded-xl border border-pine-900/6 bg-cream/65 p-3.5">
-              <p className="text-[0.7rem] leading-relaxed text-muted">
+            <div className="rounded-xl border border-pine-900/6 bg-cream/65 p-3.5 dark:border-white/10 dark:bg-pine-950/60">
+              <p className="text-[0.7rem] leading-relaxed text-muted dark:text-pine-200/70">
                 Deleting removes every community post you wrote, every report you
                 sent, and your stored guidelines acceptance. It does not touch
                 your profile, moods, thought records, safety plan, or chats on
@@ -457,16 +471,16 @@ export function SettingsPage() {
             </Button>
           </SettingCard>
 
-          <section className="rounded-[1.5rem] border border-clay/20 bg-clay-soft/70 p-5 sm:p-6">
+          <section className="rounded-[1.5rem] border border-clay/20 bg-clay-soft/70 p-5 dark:border-clay/30 dark:bg-clay/15 sm:p-6">
             <div className="flex items-start gap-3">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white/65 text-clay">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white/65 text-clay dark:bg-clay/25 dark:text-[#f0a587]">
                 <Trash2 className="h-5 w-5" aria-hidden="true" />
               </span>
               <div>
-                <h2 className="font-display text-xl font-semibold leading-tight text-[#5e2c18]">
+                <h2 className="font-display text-xl font-semibold leading-tight text-[#5e2c18] dark:text-[#f6b8a0]">
                   Clear everything
                 </h2>
-                <p className="mt-0.5 text-[0.7rem] leading-relaxed text-[#7a4128]/75">
+                <p className="mt-0.5 text-[0.7rem] leading-relaxed text-[#7a4128]/75 dark:text-[#eab9a6]/85">
                   Removes your profile, moods, thought records, safety plan, and
                   chat from this browser. This cannot be undone, and it does not
                   remove community posts—use the community control above for
@@ -496,7 +510,7 @@ export function SettingsPage() {
               <Badge tone="cream">Vercel · Firebase</Badge>
               <Badge tone="sun">No yes-man</Badge>
             </div>
-            <p className="mt-3 text-[0.7rem] leading-relaxed text-muted">
+            <p className="mt-3 text-[0.7rem] leading-relaxed text-muted dark:text-pine-200/70">
               Higala is peer support, not a therapist, psychiatrist, or
               emergency service. It can help you think clearly and take a next
               step—but it cannot keep you safe on its own.

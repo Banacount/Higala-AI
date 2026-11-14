@@ -111,10 +111,10 @@ export function ReportDialog({
     >
       {submitted ? (
         <div className="flex flex-col items-center py-6 text-center">
-          <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-pine-100 text-pine-700">
+          <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-pine-100 text-pine-700 dark:bg-pine-800/80 dark:text-pine-200">
             <CheckCircle2 className="h-7 w-7" aria-hidden="true" />
           </span>
-          <p className="mt-4 max-w-sm text-sm leading-relaxed text-muted">
+          <p className="mt-4 max-w-sm text-sm leading-relaxed text-muted dark:text-pine-200/75">
             If someone is in immediate danger, please call 911 or 1553. A report
             here is reviewed by a moderator, not an emergency service.
           </p>
@@ -122,7 +122,7 @@ export function ReportDialog({
       ) : (
         <div className="space-y-4">
           <fieldset>
-            <legend className="text-[0.64rem] font-extrabold uppercase tracking-[0.16em] text-pine-700">
+            <legend className="text-[0.64rem] font-extrabold uppercase tracking-[0.16em] text-pine-700 dark:text-pine-300">
               {replyId ? 'What is wrong with this reply?' : 'What is wrong with this post?'}
             </legend>
             <div className="mt-2 space-y-2">
@@ -131,8 +131,8 @@ export function ReportDialog({
                   key={option.id}
                   className={`flex cursor-pointer items-center gap-3 rounded-2xl border px-3.5 py-3 text-sm transition ${
                     reason === option.id
-                      ? 'border-pine-700/40 bg-pine-50 text-pine-900'
-                      : 'border-pine-900/8 bg-white/60 text-ink/80 hover:bg-white'
+                      ? 'border-pine-700/40 bg-pine-50 text-pine-900 dark:border-pine-400/60 dark:bg-pine-800/70 dark:text-cream'
+                      : 'border-pine-900/8 bg-white/60 text-ink/80 hover:bg-white dark:border-white/10 dark:bg-pine-950/60 dark:text-pine-100/85 dark:hover:border-pine-500/40 dark:hover:bg-pine-900/70'
                   }`}
                 >
                   <input
@@ -141,7 +141,7 @@ export function ReportDialog({
                     value={option.id}
                     checked={reason === option.id}
                     onChange={() => setReason(option.id)}
-                    className="h-4 w-4 accent-pine-700"
+                    className="h-4 w-4 accent-pine-700 dark:accent-pine-400"
                   />
                   <span className="font-medium">{option.label}</span>
                 </label>
@@ -150,7 +150,7 @@ export function ReportDialog({
           </fieldset>
 
           <label className="block">
-            <span className="text-[0.64rem] font-extrabold uppercase tracking-[0.16em] text-pine-700">
+            <span className="text-[0.64rem] font-extrabold uppercase tracking-[0.16em] text-pine-700 dark:text-pine-300">
               Anything else a moderator should know? (optional)
             </span>
             <textarea
@@ -159,12 +159,12 @@ export function ReportDialog({
               rows={3}
               maxLength={1_000}
               placeholder="Add a little context, without sharing anyone's private information."
-              className="mt-2 w-full resize-none rounded-2xl border border-pine-900/12 bg-white/80 px-4 py-3 text-sm leading-relaxed text-ink outline-none transition placeholder:text-muted/70 focus:border-pine-600/50 focus:ring-2 focus:ring-pine-200"
+              className="mt-2 w-full resize-none rounded-2xl border border-pine-900/12 bg-white/80 px-4 py-3 text-sm leading-relaxed text-ink outline-none transition placeholder:text-muted/70 focus:border-pine-600/50 focus:ring-2 focus:ring-pine-200 dark:border-white/12 dark:bg-pine-950/75 dark:text-cream dark:placeholder:text-pine-200/40 dark:focus:border-pine-400 dark:focus:ring-pine-500/25"
             />
           </label>
 
           {error ? (
-            <p className="rounded-xl bg-clay-soft px-3 py-2 text-xs font-semibold text-clay">
+            <p className="rounded-xl bg-clay-soft px-3 py-2 text-xs font-semibold text-clay dark:bg-clay/20 dark:text-[#f6b8a0]">
               {error}
             </p>
           ) : null}

@@ -42,16 +42,16 @@ export function QuickTools() {
     <section>
       <div className="mb-3 flex items-end justify-between gap-3">
         <div>
-          <p className="text-[0.6rem] font-extrabold uppercase tracking-[0.18em] text-pine-600">
+          <p className="text-[0.6rem] font-extrabold uppercase tracking-[0.18em] text-pine-600 dark:text-pine-300">
             Small tools, hard moments
           </p>
-          <h2 className="mt-1 font-display text-[1.5rem] font-semibold leading-tight text-pine-950">
+          <h2 className="mt-1 font-display text-[1.5rem] font-semibold leading-tight text-pine-950 dark:text-cream">
             Don’t face hard moments empty-handed.
           </h2>
         </div>
         <Link
           to="/toolkit"
-          className="inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-[0.64rem] font-bold uppercase tracking-[0.1em] text-pine-700 transition hover:bg-white/60"
+          className="inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-[0.64rem] font-bold uppercase tracking-[0.1em] text-pine-700 transition hover:bg-white/60 dark:text-pine-300 dark:hover:bg-white/[0.08]"
         >
           All tools
           <ArrowUpRight className="h-3 w-3" aria-hidden="true" />
@@ -60,10 +60,10 @@ export function QuickTools() {
 
       <div className="grid gap-4 sm:grid-cols-[1fr_20rem] sm:items-center">
         <div className="max-w-md">
-          <p className="text-[0.62rem] font-extrabold uppercase tracking-[0.14em] text-pine-600/70">
+          <p className="text-[0.62rem] font-extrabold uppercase tracking-[0.14em] text-pine-600/70 dark:text-pine-300/75">
             One tool at a time
           </p>
-          <p className="mt-2 text-sm leading-relaxed text-muted">
+          <p className="mt-2 text-sm leading-relaxed text-muted dark:text-pine-200/70">
             Here is one small thing you can try today. Open it when you need
             it — the full toolkit is always one tap away.
           </p>

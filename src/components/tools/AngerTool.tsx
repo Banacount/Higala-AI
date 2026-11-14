@@ -8,6 +8,7 @@ import {
   ShieldAlert,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { useTheme } from '@/context/ThemeContext';
 
 const SIGNALS = [
   'head feels hot',
@@ -38,6 +39,7 @@ function heatLabel(value: number): { label: string; color: string } {
 }
 
 export function AngerTool() {
+  const { isDark } = useTheme();
   const [heat, setHeat] = useState(5);
   const [signals, setSignals] = useState<string[]>([]);
   const [seconds, setSeconds] = useState(90);
@@ -95,8 +97,8 @@ export function AngerTool() {
 
   return (
     <div className="space-y-5">
-      <div className="rounded-2xl border border-clay/15 bg-clay-soft/70 px-3.5 py-2.5">
-        <p className="text-xs leading-relaxed text-[#7a4128]">
+      <div className="rounded-2xl border border-clay/15 bg-clay-soft/70 px-3.5 py-2.5 dark:border-clay/30 dark:bg-clay/15">
+        <p className="text-xs leading-relaxed text-[#7a4128] dark:text-[#f6b8a0]">
           Anger is a wave. The first surge usually peaks and falls. You do not
           have to make a permanent decision at the highest point.
         </p>
@@ -105,7 +107,7 @@ export function AngerTool() {
       <div>
         <div className="flex items-end justify-between gap-3">
           <div>
-            <p className="text-[0.62rem] font-extrabold uppercase tracking-[0.12em] text-pine-700">
+            <p className="text-[0.62rem] font-extrabold uppercase tracking-[0.12em] text-pine-700 dark:text-pine-300">
               How heated are you right now?
             </p>
             <p className="mt-1 font-display text-2xl font-semibold" style={{ color: mood.color }}>
@@ -129,14 +131,14 @@ export function AngerTool() {
           className="mt-3 h-2 w-full cursor-pointer appearance-none rounded-full bg-gradient-to-r from-pine-300 via-sun to-clay"
           style={{ accentColor: mood.color }}
         />
-        <div className="mt-1 flex justify-between text-[0.55rem] font-bold uppercase tracking-[0.08em] text-muted/50">
+        <div className="mt-1 flex justify-between text-[0.55rem] font-bold uppercase tracking-[0.08em] text-muted/50 dark:text-pine-200/45">
           <span>1 · calm</span>
           <span>10 · about to boil</span>
         </div>
       </div>
 
       <div>
-        <p className="text-[0.62rem] font-extrabold uppercase tracking-[0.12em] text-pine-700">
+        <p className="text-[0.62rem] font-extrabold uppercase tracking-[0.12em] text-pine-700 dark:text-pine-300">
           What’s happening in your body?
         </p>
         <div className="mt-2 flex flex-wrap gap-1.5">
@@ -151,7 +153,7 @@ export function AngerTool() {
                 className={`rounded-full border px-2.5 py-1.5 text-[0.66rem] font-bold transition ${
                   selected
                     ? 'border-clay bg-clay text-white'
-                    : 'border-pine-900/10 bg-white/65 text-pine-800 hover:border-clay/30'
+                    : 'border-pine-900/10 bg-white/65 text-pine-800 hover:border-clay/30 dark:border-white/10 dark:bg-pine-950/60 dark:text-pine-100 dark:hover:border-clay/50 dark:hover:bg-pine-900/70'
                 }`}
               >
                 {signal}
@@ -161,28 +163,28 @@ export function AngerTool() {
         </div>
       </div>
 
-      <div className="rounded-[1.4rem] border border-pine-900/8 bg-white/65 p-4">
+      <div className="rounded-[1.4rem] border border-pine-900/8 bg-white/65 p-4 dark:border-white/10 dark:bg-pine-950/60">
         <div className="flex items-center gap-3">
           <div
             className="relative flex h-24 w-24 shrink-0 items-center justify-center rounded-full"
             style={{
-              background: `conic-gradient(#B85C38 ${progress}%, #F0E4DC ${progress}% 100%)`,
+              background: `conic-gradient(#B85C38 ${progress}%, ${isDark ? '#2c1c17' : '#F0E4DC'} ${progress}% 100%)`,
             }}
           >
-            <div className="flex h-[4.8rem] w-[4.8rem] flex-col items-center justify-center rounded-full bg-cream">
-              <span className="font-display text-2xl font-semibold leading-none text-pine-950">
+            <div className="flex h-[4.8rem] w-[4.8rem] flex-col items-center justify-center rounded-full bg-cream dark:bg-[#0d1f18]">
+              <span className="font-display text-2xl font-semibold leading-none text-pine-950 dark:text-cream">
                 {seconds}
               </span>
-              <span className="text-[0.5rem] font-extrabold uppercase tracking-[0.08em] text-muted/60">
+              <span className="text-[0.5rem] font-extrabold uppercase tracking-[0.08em] text-muted/60 dark:text-pine-200/55">
                 seconds
               </span>
             </div>
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-[0.6rem] font-extrabold uppercase tracking-[0.12em] text-clay">
+            <p className="text-[0.6rem] font-extrabold uppercase tracking-[0.12em] text-clay dark:text-[#f0a587]">
               90-second pause
             </p>
-            <p className="mt-1 text-xs leading-relaxed text-muted">
+            <p className="mt-1 text-xs leading-relaxed text-muted dark:text-pine-200/70">
               {seconds === 0
                 ? 'The first wave has passed. Choose your next move—not the loudest one.'
                 : 'Breathe out slowly. Do not send the message yet. Do not make the call yet.'}
@@ -205,17 +207,17 @@ export function AngerTool() {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-pine-900/8 bg-pine-50 p-4">
-        <p className="text-[0.6rem] font-extrabold uppercase tracking-[0.12em] text-pine-700">
+      <div className="rounded-2xl border border-pine-900/8 bg-pine-50 p-4 dark:border-pine-500/25 dark:bg-pine-900/65">
+        <p className="text-[0.6rem] font-extrabold uppercase tracking-[0.12em] text-pine-700 dark:text-pine-300">
           Say it without lighting the fire
         </p>
-        <p className="mt-1.5 font-display text-lg leading-snug text-pine-950">
+        <p className="mt-1.5 font-display text-lg leading-snug text-pine-950 dark:text-cream">
           “{SCRIPT}”
         </p>
         <button
           type="button"
           onClick={copyScript}
-          className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-white/70 px-2.5 py-1.5 text-[0.62rem] font-bold text-pine-800 transition hover:bg-white"
+          className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-white/70 px-2.5 py-1.5 text-[0.62rem] font-bold text-pine-800 transition hover:bg-white dark:bg-white/10 dark:text-cream dark:hover:bg-white/20"
         >
           {copied ? (
             <Check className="h-3 w-3" aria-hidden="true" />
@@ -227,7 +229,7 @@ export function AngerTool() {
       </div>
 
       <div>
-        <p className="text-[0.62rem] font-extrabold uppercase tracking-[0.12em] text-pine-700">
+        <p className="text-[0.62rem] font-extrabold uppercase tracking-[0.12em] text-pine-700 dark:text-pine-300">
           What will you do next?
         </p>
         <div className="mt-2 flex flex-wrap gap-1.5">
@@ -241,8 +243,8 @@ export function AngerTool() {
                 aria-pressed={selected}
                 className={`rounded-full border px-2.5 py-1.5 text-[0.66rem] font-bold transition ${
                   selected
-                    ? 'border-pine-600 bg-pine-900 text-cream'
-                    : 'border-pine-900/10 bg-white/65 text-pine-800 hover:border-pine-300'
+                    ? 'border-pine-600 bg-pine-900 text-cream dark:border-pine-400 dark:bg-pine-600 dark:text-white'
+                    : 'border-pine-900/10 bg-white/65 text-pine-800 hover:border-pine-300 dark:border-white/10 dark:bg-pine-950/60 dark:text-pine-100 dark:hover:border-pine-400/50 dark:hover:bg-pine-900/70'
                 }`}
               >
                 {step}
@@ -251,18 +253,18 @@ export function AngerTool() {
           })}
         </div>
         {nextStep ? (
-          <p className="mt-2 text-[0.68rem] font-semibold text-pine-700">
+          <p className="mt-2 text-[0.68rem] font-semibold text-pine-700 dark:text-pine-300">
             Okay. {nextStep}. One step, not your whole life.
           </p>
         ) : null}
       </div>
 
-      <div className="flex items-start gap-2 rounded-xl border border-clay/15 bg-clay-soft/60 px-3 py-2.5">
+      <div className="flex items-start gap-2 rounded-xl border border-clay/15 bg-clay-soft/60 px-3 py-2.5 dark:border-clay/30 dark:bg-clay/15">
         <ShieldAlert
-          className="mt-0.5 h-3.5 w-3.5 shrink-0 text-clay"
+          className="mt-0.5 h-3.5 w-3.5 shrink-0 text-clay dark:text-[#f0a587]"
           aria-hidden="true"
         />
-        <p className="text-[0.65rem] leading-relaxed text-[#7a4128]">
+        <p className="text-[0.65rem] leading-relaxed text-[#7a4128] dark:text-[#f6b8a0]">
           If you might hurt yourself or someone else, step away and call{' '}
           <a className="font-bold underline" href="tel:911">
             911
