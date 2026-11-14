@@ -76,7 +76,7 @@ Voice messages still need a Gemini key because transcription requires the live m
 
 `GEMINI_MODEL` is optional. The default is `gemini-3.5-flash`. If the configured model is rate-limited or unavailable, the server retries, then falls back to `gemini-3.5-flash-lite`. If every live attempt fails, the app tells the user the live service is unavailable and labels any offline reply as `Demo` instead of quietly swapping in a scripted answer.
 
-`GEMINI_TRANSCRIBE_MODEL` is optional. The default is the dedicated `gemini-3.5-transcribe` model, which is faster than a general chat model for speech and supports Cebuano (`ceb`) and Filipino (`fil-PH`) directly. If it is unavailable, the server falls back to `gemini-3.5-flash` so voice messages keep working.
+`GEMINI_TRANSCRIBE_MODEL` is optional. The default is the dedicated `gemini-3.5-transcribe` model, which is faster than a general chat model for speech and lists Cebuano (`ceb`) and Filipino (`fil-PH`) as supported. Accuracy is not guaranteed — the hints are a prior, not a constraint, so code-switching is preserved and the model still detects the spoken language. If it is unavailable, the server falls back to `gemini-3.5-flash`.
 
 ---
 
@@ -165,8 +165,14 @@ Browser (MediaRecorder, 48 kbps speech)
 
 The transcription call uses the dedicated `gemini-3.5-transcribe` model with
 `ceb`, `fil-PH`, and `en-US` hints. The hints are a prior rather than a hard
-constraint, so Bisaya/Tagalog code-switching is preserved. If the dedicated
-model is unavailable, the server falls back to `gemini-3.5-flash`.
+constraint, so Bisaya/Tagalog code-switching is preserved. Cebuano and Filipino
+are listed as supported by the model, but Google publishes no accuracy SLA for
+transcription, so treat the transcript as best-effort. If the dedicated model is
+unavailable, the server falls back to `gemini-3.5-flash`.
+
+Each model is attempted once. A second attempt on a slow or rate-limited call
+would compound latency inside the 60 s function budget, so the server retries
+only transient 5xx/network errors and otherwise fails fast.
 
 Both the transcription request and the chat request set `store: false`, so
 Google does not retain the audio, transcript, or reply as interaction/log

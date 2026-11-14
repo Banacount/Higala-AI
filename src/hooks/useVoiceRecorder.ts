@@ -52,19 +52,26 @@ function createRecorder(
   stream: MediaStream,
   mimeType: string | undefined,
 ): MediaRecorder {
-  const options: MediaRecorderOptions = {
-    audioBitsPerSecond: VOICE_BITS_PER_SECOND,
-  };
-  if (mimeType) options.mimeType = mimeType;
+  // Some Safari versions reject an explicit bitrate, and some reject an
+  // explicit mimeType (e.g. when audio/mp4 is not supported). Try the most
+  // specific options first and fall back to the bare constructor instead of
+  // surfacing "could not start a voice recording".
+  const attempts: MediaRecorderOptions[] = [
+    { audioBitsPerSecond: VOICE_BITS_PER_SECOND, ...(mimeType ? { mimeType } : {}) },
+    mimeType ? { mimeType } : {},
+    {},
+  ];
 
-  try {
-    return new MediaRecorder(stream, options);
-  } catch {
-    // Some browsers reject an explicit bitrate; fall back to their default.
-    return mimeType
-      ? new MediaRecorder(stream, { mimeType })
-      : new MediaRecorder(stream);
+  for (const options of attempts) {
+    try {
+      return new MediaRecorder(stream, options);
+    } catch {
+      // Try the next, less specific option set.
+    }
   }
+
+  // The stream itself is unusable; rethrow the final failure as a real error.
+  throw new Error('Could not start a voice recording.');
 }
 
 function mediaErrorMessage(error: unknown): string {
