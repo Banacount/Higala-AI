@@ -37,7 +37,7 @@ function createVoiceUrl(blob: Blob): string {
   }
 }
 
-export function useChat() {
+export function useChat(mode: 'friendly' | 'honest' = 'friendly') {
   const { profile } = useApp();
   const [messages, setMessages] = useLocalStorage<ChatMessage[]>(
     STORAGE_KEYS.chat,
@@ -134,6 +134,7 @@ export function useChat() {
           history,
           profile.language,
           nextRisk,
+          mode,
         );
         // The conversation was reset while this request was in flight.
         if (epochRef.current !== epoch) return;
@@ -177,7 +178,7 @@ export function useChat() {
         }
       }
     },
-    [appendMessage, messages, profile.language],
+    [appendMessage, messages, profile.language, mode],
   );
 
   const sendVoice = useCallback(
@@ -216,6 +217,7 @@ export function useChat() {
           profile.language,
           riskLevel,
           durationMs,
+          mode,
         );
 
         // The conversation was reset while this request was in flight.
@@ -266,6 +268,7 @@ export function useChat() {
       profile.language,
       riskLevel,
       updateMessage,
+      mode,
     ],
   );
 

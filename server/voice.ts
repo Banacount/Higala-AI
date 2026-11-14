@@ -654,6 +654,11 @@ export async function handleVoiceChat(
     );
   }
 
+  const mode =
+    form.fields.mode === 'honest' || form.fields.mode === 'friendly'
+      ? form.fields.mode
+      : 'friendly';
+
   const request: ChatApiRequest = {
     messages: [
       ...fitHistory(history, transcript),
@@ -661,6 +666,7 @@ export async function handleVoiceChat(
     ],
     language,
     riskLevel,
+    mode,
   };
 
   try {

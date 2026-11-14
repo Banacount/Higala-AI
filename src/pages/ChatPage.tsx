@@ -17,6 +17,15 @@ export function ChatPage() {
   const [searchParams] = useSearchParams();
   const [draft, setDraft] = useState(() => searchParams.get('prompt') ?? '');
   const [candorOpen, setCandorOpen] = useState(false);
+  const [mode, setMode] = useState<'friendly' | 'honest'>(() => {
+    try {
+      return localStorage.getItem('higala-chat-mode') === 'honest'
+        ? 'honest'
+        : 'friendly';
+    } catch {
+      return 'friendly';
+    }
+  });
   const scrollRef = useRef<HTMLDivElement>(null);
   const {
     messages,
@@ -28,9 +37,17 @@ export function ChatPage() {
     sendVoice,
     reset,
     dismissError,
-  } = useChat();
+  } = useChat(mode);
 
   const promptFromUrl = searchParams.get('prompt');
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('higala-chat-mode', mode);
+    } catch {
+      // Ignore storage failures.
+    }
+  }, [mode]);
 
   useEffect(() => {
     if (promptFromUrl) setDraft(promptFromUrl);
@@ -84,6 +101,21 @@ export function ChatPage() {
         <div className="mx-auto flex w-full max-w-5xl flex-col items-center justify-center gap-1.5 px-4 py-3 sm:px-6">
           <div className="flex shrink-0 items-center justify-center gap-1.5">
             <LanguagePicker />
+            <button
+              type="button"
+              onClick={() =>
+                setMode((prev) => (prev === 'friendly' ? 'honest' : 'friendly'))
+              }
+              aria-label="Toggle AI mode"
+              title={
+                mode === 'friendly'
+                  ? 'Friendly mode: warm and casual'
+                  : 'Honest mode: direct, serious, and compassionate'
+              }
+              className="flex h-8 items-center gap-1 rounded-full border border-pine-900/10 bg-white/60 px-2.5 text-[0.62rem] font-bold uppercase tracking-[0.08em] text-pine-800 transition hover:bg-white"
+            >
+              {mode === 'friendly' ? 'Friendly' : 'Honest'}
+            </button>
             <button
               type="button"
               onClick={newChat}

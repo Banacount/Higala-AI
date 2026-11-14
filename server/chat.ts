@@ -99,10 +99,16 @@ export function validateChatRequest(payload: unknown): ChatApiRequest {
     ? record.riskLevel
     : 'none';
 
+  const mode =
+    record.mode === 'honest' || record.mode === 'friendly'
+      ? record.mode
+      : 'friendly';
+
   return {
     messages,
     language: record.language,
     riskLevel,
+    mode,
   };
 }
 
@@ -212,7 +218,11 @@ async function generateOnce(
     model,
     contents: toGeminiContents(request.messages),
     config: {
-      systemInstruction: buildSystemPrompt(request.language, riskLevel),
+      systemInstruction: buildSystemPrompt(
+        request.language,
+        riskLevel,
+        request.mode ?? 'friendly',
+      ),
       temperature: 0.85,
       maxOutputTokens: MAX_OUTPUT_TOKENS,
       // Gemini 3.5 supports thinking levels; minimal keeps chat replies fast
@@ -227,7 +237,7 @@ async function generateOnce(
           message: {
             type: Type.STRING,
             description:
-              'The natural friend-like reply. Usually one to four sentences; longer only when the moment genuinely needs room. No headings or bullet lists in ordinary conversation. Not every reply ends with a question.',
+              'The natural reply in the selected mode. Usually one to four sentences; longer only when the moment genuinely needs room. No headings or bullet lists in ordinary conversation. Not every reply ends with a question.',
           },
           challenge: {
             type: Type.STRING,

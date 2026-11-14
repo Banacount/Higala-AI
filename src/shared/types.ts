@@ -31,10 +31,13 @@ export interface ChatTurn {
   content: string;
 }
 
+export type ChatMode = 'friendly' | 'honest';
+
 export interface ChatApiRequest {
   messages: ChatTurn[];
   language: Language;
   riskLevel?: RiskLevel;
+  mode?: ChatMode;
 }
 
 export interface ChatApiResponse {
