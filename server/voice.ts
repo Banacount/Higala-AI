@@ -41,7 +41,10 @@ const MAX_VOICE_RECORDING_MS = 120_000;
 const MAX_VOICE_HISTORY = 16;
 const MAX_TRANSCRIPT_CHARS = 4_000;
 const MAX_TRANSCRIPT_OUTPUT_TOKENS = 2_048;
-const MAX_ATTEMPTS_PER_MODEL = 2;
+// One attempt per model. Voice messages run inside a 60 s Vercel function
+// budget, and a second Gemini call on a slow or rate-limited request almost
+// never helps; it is more likely to push the function over the edge.
+const MAX_ATTEMPTS_PER_MODEL = 1;
 const RETRY_DELAY_MS = 700;
 
 const LANGUAGE_NAMES: Record<Language, string> = {
@@ -101,6 +104,116 @@ function ascii(data: Buffer, start: number, end: number): string {
   return data.subarray(start, end).toString('ascii');
 }
 
+/**
+ * MP4-family brands that carry audio. The `ftyp` box appears in every MP4
+ * variant (video, images, metadata), so the brand helps decide whether an
+ * MP4-family file is actually audio we will send to the transcription model.
+ * Audio-specific brands are accepted directly: `M4A ` (Apple audio), `M4B `
+ * (audiobook), and `M4R ` (ringtone). Generic ISO base-media brands such as
+ * `isom`, `mp42`, and `mp41` are NOT sufficient on their own because video
+ * files also use them, but a generic-brand file is still accepted when its
+ * track list is audio-only (see `hasAudioOnlyMp4Tracks`), since many common
+ * M4A recordings produced by non-Apple toolchains use a generic major brand.
+ * Brands are case-sensitive per the spec.
+ */
+const AUDIO_MP4_BRANDS = new Set(['M4A ', 'M4B ', 'M4R ']);
+
+/**
+ * Returns true when `data` is an MP4-family container that carries audio and
+ * no video track. Detection combines two lightweight signals so that common
+ * legitimate M4A recordings are not rejected:
+ *
+ *  1. Any audio brand (`M4A `/`M4B `/`M4R `) appearing anywhere in the `ftyp`
+ *     box's brand list (major brand or any compatible brand). Many files use a
+ *     generic major brand (`isom`/`mp42`) but still list an audio brand among
+ *     their compatible brands.
+ *  2. An audio-only track list: the `moov` box contains at least one `trak`
+ *     whose handler is `soun` and no `trak` whose handler is `vide`. This
+ *     catches M4A files that use only generic brands.
+ */
+function isAudioMp4(data: Buffer): boolean {
+  if (data.length <= 12 || ascii(data, 4, 8) !== 'ftyp') return false;
+
+  // (1) Brand scan across the whole ftyp box.
+  const boxSize = readBoxSize(data, 0);
+  const ftypEnd = boxSize > 0 && boxSize <= data.length ? boxSize : Math.min(data.length, 64);
+  for (let offset = 8; offset + 4 <= ftypEnd; offset += 4) {
+    if (AUDIO_MP4_BRANDS.has(ascii(data, offset, offset + 4))) {
+      return true;
+    }
+  }
+
+  // (2) Audio-only track list.
+  return hasAudioOnlyMp4Tracks(data);
+}
+
+function readBoxSize(data: Buffer, offset: number): number {
+  if (offset + 8 > data.length) return 0;
+  const size = data.readUInt32BE(offset);
+  if (size === 1) {
+    if (offset + 16 > data.length) return 0;
+    // Extended size; clamp to a safe 32-bit range for our purposes.
+    const high = data.readUInt32BE(offset + 8);
+    const low = data.readUInt32BE(offset + 12);
+    if (high !== 0) return data.length;
+    return low;
+  }
+  return size;
+}
+
+function findBox(data: Buffer, type: string, start: number, end: number): { offset: number; size: number } | null {
+  let offset = start;
+  while (offset + 8 <= end) {
+    const size = readBoxSize(data, offset);
+    if (size < 8) return null;
+    const boxEnd = offset + size;
+    if (boxEnd > end) return null;
+    if (ascii(data, offset + 4, offset + 8) === type) {
+      return { offset, size };
+    }
+    if (size === 0) {
+      // Box extends to end of container; stop scanning.
+      break;
+    }
+    offset = boxEnd;
+  }
+  return null;
+}
+
+function hasAudioOnlyMp4Tracks(data: Buffer): boolean {
+  const moov = findBox(data, 'moov', 0, data.length);
+  if (!moov) return false;
+
+  const moovStart = moov.offset + 8;
+  const moovEnd = moov.offset + moov.size;
+  let hasAudio = false;
+  let hasVideo = false;
+  let cursor = moovStart;
+  while (cursor + 8 <= moovEnd) {
+    const trak = findBox(data, 'trak', cursor, moovEnd);
+    if (!trak) break;
+    const handler = trackHandlerType(data, trak.offset, trak.offset + trak.size);
+    if (handler === 'soun') hasAudio = true;
+    if (handler === 'vide') hasVideo = true;
+    cursor = trak.offset + trak.size;
+    if (cursor <= trak.offset) break;
+  }
+
+  return hasAudio && !hasVideo;
+}
+
+function trackHandlerType(data: Buffer, trakStart: number, trakEnd: number): string | null {
+  const mdia = findBox(data, 'mdia', trakStart + 8, trakEnd);
+  if (!mdia) return null;
+  const hdlr = findBox(data, 'hdlr', mdia.offset + 8, mdia.offset + mdia.size);
+  if (!hdlr || hdlr.size < 24) return null;
+  // handler_type sits 16 bytes into the hdlr box (8-byte header + version/flags
+  // + pre_defined).
+  const ho = hdlr.offset + 16;
+  if (ho + 4 > data.length) return null;
+  return ascii(data, ho, ho + 4);
+}
+
 const AUDIO_FORMATS: SupportedAudioFormat[] = [
   {
     // MediaRecorder in Chromium/Firefox: EBML header for WebM.
@@ -112,9 +225,12 @@ const AUDIO_FORMATS: SupportedAudioFormat[] = [
     matches: (data) => ascii(data, 0, 4) === 'OggS',
   },
   {
-    // Safari records AAC audio in an MP4/M4A container.
+    // Safari records AAC audio in an MP4/M4A container. The `ftyp` box is
+    // shared by every MP4-family container (video, images, generic), so the
+    // brand at bytes 8-12 must be an audio brand — otherwise a video MP4
+    // would pass as `audio/m4a` and reach the transcription endpoint.
     mimeType: 'audio/m4a',
-    matches: (data) => data.length > 12 && ascii(data, 4, 8) === 'ftyp',
+    matches: (data) => isAudioMp4(data),
   },
   {
     mimeType: 'audio/wav',
@@ -131,7 +247,7 @@ const AUDIO_FORMATS: SupportedAudioFormat[] = [
   },
 ];
 
-function detectAudioMimeType(data: Buffer): string | null {
+export function detectAudioMimeType(data: Buffer): string | null {
   return AUDIO_FORMATS.find((format) => format.matches(data))?.mimeType ?? null;
 }
 
@@ -221,6 +337,75 @@ function fitHistory(history: ChatTurn[], transcript: string): ChatTurn[] {
   return kept;
 }
 
+/**
+ * Parses the client-supplied recording duration. The client's value is only
+ * advisory — the real limit is the file size — but it must not be allowed to
+ * carry NaN, Infinity, or a negative value past this check. A missing or
+ * unparseable field is treated as zero here; the caller rejects a zero result
+ * so that missing/invalid metadata cannot be used to bypass the duration
+ * check.
+ */
+export function parseDurationMs(value: string | undefined): number {
+  if (value === undefined || value === '') return 0;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 0) return 0;
+  return Math.floor(parsed);
+}
+
+/**
+ * The only Interaction status that means the transcript is complete and
+ * trustworthy. Everything else — including `incomplete` (e.g. the decode hit
+ * `max_output_tokens`) and `requires_continuation` (a hop that stopped before
+ * the output finished) — is a failure. Partial text from a non-completed
+ * interaction must never reach the chat flow, so the check is an explicit
+ * allow-list rather than a negation: a future unknown status string is
+ * rejected instead of silently passing.
+ */
+const COMPLETED_INTERACTION_STATUS = 'completed' as const;
+
+export function assertTranscriptionCompleted(status: string | undefined): void {
+  if (status !== COMPLETED_INTERACTION_STATUS) {
+    throw new Error(
+      `Transcription did not complete (status: ${status ?? 'unset'}).`,
+    );
+  }
+}
+
+/**
+ * Finish reasons that mean the model stopped for a reason other than a clean
+ * end of output. `MAX_TOKENS` truncates the transcript mid-sentence; the
+ * safety/recitation/block reasons mean the text is not a usable transcription.
+ * `FINISH_REASON_UNSPECIFIED` and `STOP` are the only safe values for speech
+ * output, and even then the status check above is the primary guard.
+ */
+const UNSAFE_FINISH_REASONS = new Set([
+  'MAX_TOKENS',
+  'SAFETY',
+  'RECITATION',
+  'LANGUAGE',
+  'OTHER',
+  'BLOCKLIST',
+  'PROHIBITED_CONTENT',
+  'SPII',
+  'MALFORMED_FUNCTION_CALL',
+  'IMAGE_SAFETY',
+  'UNEXPECTED_TOOL_CALL',
+  'TOO_MANY_TOOL_CALLS',
+  'IMAGE_PROHIBITED_CONTENT',
+  'NO_IMAGE',
+  'IMAGE_RECITATION',
+  'IMAGE_OTHER',
+]);
+
+export function assertCleanFinish(finishReason: string | undefined): void {
+  if (!finishReason) return;
+  if (UNSAFE_FINISH_REASONS.has(finishReason)) {
+    throw new Error(
+      `Transcription stopped early (finishReason: ${finishReason}).`,
+    );
+  }
+}
+
 function cleanTranscript(raw: string): string {
   let text = raw
     .trim()
@@ -254,13 +439,9 @@ function errorMessage(error: unknown): string {
 function isRetryable(error: unknown): boolean {
   if (!error || typeof error !== 'object') return false;
   const status = (error as { status?: unknown }).status;
-  if (
-    status === 429 ||
-    status === 500 ||
-    status === 502 ||
-    status === 503 ||
-    status === 504
-  ) {
+  // 429s are excluded: retrying them after a 700 ms pause compounds latency
+  // inside the 60 s function budget and almost never succeeds.
+  if (status === 500 || status === 502 || status === 503 || status === 504) {
     return true;
   }
   return /UNAVAILABLE|high demand|deadline|timed? ?out|ECONNRESET|ETIMEDOUT|fetch failed|network/i.test(
@@ -314,6 +495,9 @@ async function transcribeWithDedicatedModel(
         // Hints, not a hard constraint: the model still detects the spoken
         // language and preserves intra-sentence code-switching.
         language_codes: LANGUAGE_HINTS[language],
+        // 'verbatim' is the documented enum value for verbatim transcription
+        // (vs. 'summarize'). Kept as a string literal so the API can tighten
+        // the enum without a breaking change; see the Interactions API docs.
         mode: 'verbatim',
       },
     },
@@ -321,9 +505,11 @@ async function transcribeWithDedicatedModel(
     store: false,
   });
 
-  if (response.status !== 'completed') {
-    throw new Error(`Transcription did not complete (${response.status}).`);
-  }
+  // The Interactions API merges continuation hops automatically, so a
+  // non-completed status (e.g. `incomplete` after max_output_tokens, or
+  // `requires_continuation`) can still carry partial `output_text`. Reject
+  // those explicitly so partial text never reaches the chat flow.
+  assertTranscriptionCompleted(response.status);
 
   return cleanTranscript(response.output_text ?? '');
 }
@@ -374,6 +560,12 @@ async function transcribeWithModel(
       ],
     },
   });
+
+  // The fallback path has no interaction status, so guard on the candidate's
+  // finish reason instead. A truncated transcript (MAX_TOKENS) or a
+  // safety/recitation stop is not a usable transcription.
+  const firstCandidate = response.candidates?.[0];
+  assertCleanFinish(firstCandidate?.finishReason);
 
   return cleanTranscript(response.text ?? '');
 }
@@ -435,11 +627,16 @@ export async function handleVoiceChat(
     throw new VoiceValidationError('An audio recording is required.');
   }
 
-  const declaredDuration = Number(form.fields.durationMs);
-  if (
-    Number.isFinite(declaredDuration) &&
-    declaredDuration > MAX_VOICE_RECORDING_MS + 5_000
-  ) {
+  const declaredDuration = parseDurationMs(form.fields.durationMs);
+  // A missing/invalid/non-finite/non-positive duration parses to 0. Treating
+  // that as "unknown" would let a client omit or falsify `durationMs` and slip
+  // past the maximum-recording check, so reject it instead of accepting it.
+  // The file-size limit remains the backstop for the actual payload, but the
+  // declared duration must be present and plausible.
+  if (declaredDuration <= 0) {
+    throw new VoiceValidationError('A recording duration is required.');
+  }
+  if (declaredDuration > MAX_VOICE_RECORDING_MS + 5_000) {
     throw new VoiceValidationError(
       'That recording is too long. Keep voice messages under two minutes.',
     );
