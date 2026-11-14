@@ -4,6 +4,7 @@ import {
   HeartHandshake,
   Loader2,
   MessageCircle,
+  Pencil,
   Send,
   ShieldCheck,
   Trash2,
@@ -18,6 +19,7 @@ import {
   CommunityApiError,
   createReply as createReplyRequest,
   deleteReply as deleteReplyRequest,
+  editReply as editReplyRequest,
 } from '@/lib/communityClient';
 import { COMMUNITY_LIMITS, type CommunityReply } from '@/shared/community';
 import { formatRelativeTime } from '@/lib/utils';
@@ -45,6 +47,7 @@ export function CommunityRepliesSection({
     addReply,
     removeReply,
     updateReplyReactions,
+    setReplies,
   } = useCommunityReplies(postId);
 
   const [content, setContent] = useState('');
@@ -57,6 +60,10 @@ export function CommunityRepliesSection({
   const [supportSuggested, setSupportSuggested] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState('');
+  const [savingEditId, setSavingEditId] = useState<string | null>(null);
+  const [editError, setEditError] = useState<string | null>(null);
 
   /** Publishes the composed reply, handling review and guidelines states. */
   const submitReply = async (tokenOverride?: string) => {
@@ -172,6 +179,41 @@ export function CommunityRepliesSection({
       );
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  const startEditReply = (reply: CommunityReply) => {
+    setEditingId(reply.id);
+    setEditContent(reply.content);
+    setEditError(null);
+  };
+
+  const cancelEditReply = () => {
+    setEditingId(null);
+    setEditContent('');
+    setEditError(null);
+  };
+
+  const saveEditReply = async (reply: CommunityReply) => {
+    setSavingEditId(reply.id);
+    setEditError(null);
+    try {
+      const token = await getIdToken();
+      const result = await editReplyRequest(
+        { replyId: reply.id, content: editContent.trim() },
+        token,
+      );
+      setReplies((prev) =>
+        prev.map((r) => (r.id === reply.id ? result.reply : r)),
+      );
+      setEditingId(null);
+      setEditContent('');
+    } catch (cause) {
+      setEditError(
+        cause instanceof Error ? cause.message : 'The reply could not be updated.',
+      );
+    } finally {
+      setSavingEditId(null);
     }
   };
 
@@ -384,9 +426,43 @@ export function CommunityRepliesSection({
                   </span>
                 </div>
 
-                <p className="mt-2.5 whitespace-pre-line text-sm leading-relaxed text-ink/90">
-                  {reply.content}
-                </p>
+                {editingId === reply.id ? (
+                  <div className="mt-2.5 space-y-2">
+                    <textarea
+                      value={editContent}
+                      onChange={(e) => setEditContent(e.target.value)}
+                      rows={3}
+                      maxLength={COMMUNITY_LIMITS.replyContent}
+                      className="w-full resize-y rounded-xl border border-pine-900/10 bg-white/90 p-3 text-sm leading-relaxed text-ink focus:border-pine-500 focus:outline-none focus:ring-2 focus:ring-pine-200"
+                    />
+                    {editError ? (
+                      <p className="rounded-xl bg-clay-soft px-3 py-2 text-xs font-semibold text-clay">
+                        {editError}
+                      </p>
+                    ) : null}
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        onClick={() => void saveEditReply(reply)}
+                        disabled={savingEditId === reply.id || !editContent.trim()}
+                      >
+                        {savingEditId === reply.id ? 'Saving…' : 'Save'}
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={cancelEditReply}
+                        disabled={savingEditId === reply.id}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="mt-2.5 whitespace-pre-line text-sm leading-relaxed text-ink/90">
+                    {reply.content}
+                  </p>
+                )}
 
                 {/* Reply emoji reactions & self-deletion */}
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-pine-900/6 pt-2">
@@ -401,20 +477,33 @@ export function CommunityRepliesSection({
                   />
 
                   {reply.isMine ? (
-                    <Button
-                      variant="danger"
-                      size="sm"
-                      onClick={() => void handleDelete(reply)}
-                      disabled={isDeleting}
-                      className="text-xs ml-auto"
-                    >
-                      {isDeleting ? (
-                        <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
-                      ) : (
-                        <Trash2 className="h-3 w-3" aria-hidden="true" />
-                      )}
-                      {isDeleting ? 'Deleting…' : 'Delete'}
-                    </Button>
+                    <div className="ml-auto flex gap-2">
+                      {editingId !== reply.id ? (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => startEditReply(reply)}
+                          className="text-xs"
+                        >
+                          <Pencil className="h-3 w-3" aria-hidden="true" />
+                          Edit
+                        </Button>
+                      ) : null}
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={() => void handleDelete(reply)}
+                        disabled={isDeleting || editingId === reply.id}
+                        className="text-xs"
+                      >
+                        {isDeleting ? (
+                          <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
+                        ) : (
+                          <Trash2 className="h-3 w-3" aria-hidden="true" />
+                        )}
+                        {isDeleting ? 'Deleting…' : 'Delete'}
+                      </Button>
+                    </div>
                   ) : null}
                 </div>
               </article>

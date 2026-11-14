@@ -128,6 +128,27 @@ export function deletePost(postId: string, token: string): Promise<{ ok: true }>
   return communityPost({ action: 'delete-post', postId }, token);
 }
 
+export function editPost(
+  input: {
+    postId: string;
+    title: string;
+    content: string;
+    category: string | null;
+  },
+  token: string,
+): Promise<{ post: CommunityPost }> {
+  return communityPost(
+    {
+      action: 'edit-post',
+      postId: input.postId,
+      title: input.title,
+      content: input.content,
+      category: input.category,
+    },
+    token,
+  );
+}
+
 export function createReply(
   input: {
     postId: string;
@@ -150,6 +171,20 @@ export function deleteReply(
   token: string,
 ): Promise<{ ok: true }> {
   return communityPost({ action: 'delete-reply', replyId }, token);
+}
+
+export function editReply(
+  input: { replyId: string; content: string },
+  token: string,
+): Promise<{ reply: CommunityReply }> {
+  return communityPost(
+    {
+      action: 'edit-reply',
+      replyId: input.replyId,
+      content: input.content,
+    },
+    token,
+  );
 }
 
 /** Sends a post-reaction toggle request and returns the server's fresh state. */

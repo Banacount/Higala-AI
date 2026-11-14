@@ -6,6 +6,7 @@ import {
   Flag,
   Loader2,
   MessageCircle,
+  Pencil,
   ShieldCheck,
   Trash2,
 } from 'lucide-react';
@@ -22,7 +23,10 @@ import { useAuth } from '@/context/AuthContext';
 import { useCommunityPost } from '@/hooks/useCommunityPost';
 import {
   deletePost as deletePostRequest,
+  editPost as editPostRequest,
 } from '@/lib/communityClient';
+import type { CommunityCategory } from '@/shared/community';
+import { COMMUNITY_CATEGORIES } from '@/shared/community';
 import { formatRelativeTime } from '@/lib/utils';
 
 interface PostLocationState {
@@ -43,6 +47,12 @@ export function CommunityPostPage() {
   const [reportOpen, setReportOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [draftTitle, setDraftTitle] = useState('');
+  const [draftContent, setDraftContent] = useState('');
+  const [draftCategory, setDraftCategory] = useState<CommunityCategory | null>(null);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
 
   const remove = async () => {
     if (!post) return;
@@ -68,6 +78,46 @@ export function CommunityPostPage() {
       );
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const startEdit = () => {
+    if (!post) return;
+    setDraftTitle(post.title);
+    setDraftContent(post.content);
+    setDraftCategory(post.category);
+    setEditError(null);
+    setEditing(true);
+  };
+
+  const cancelEdit = () => {
+    setEditing(false);
+    setEditError(null);
+  };
+
+  const saveEdit = async () => {
+    if (!post) return;
+    setSavingEdit(true);
+    setEditError(null);
+    try {
+      const token = await getIdToken();
+      const result = await editPostRequest(
+        {
+          postId: post.id,
+          title: draftTitle.trim(),
+          content: draftContent.trim(),
+          category: draftCategory,
+        },
+        token,
+      );
+      setPost(result.post);
+      setEditing(false);
+    } catch (cause) {
+      setEditError(
+        cause instanceof Error ? cause.message : 'The post could not be updated.',
+      );
+    } finally {
+      setSavingEdit(false);
     }
   };
 
@@ -161,15 +211,75 @@ export function CommunityPostPage() {
                   </span>
                 </div>
 
-                {post.title ? (
-                  <h1 className="mt-3 font-display text-2xl font-semibold leading-tight text-pine-950 sm:text-[1.9rem]">
-                    {post.title}
-                  </h1>
-                ) : null}
+                {editing ? (
+                  <div className="mt-3 space-y-3">
+                    <input
+                      type="text"
+                      value={draftTitle}
+                      onChange={(e) => setDraftTitle(e.target.value)}
+                      placeholder="Title (optional)"
+                      maxLength={120}
+                      className="w-full rounded-xl border border-pine-900/10 bg-white/90 px-3 py-2 text-sm font-semibold text-ink focus:border-pine-500 focus:outline-none focus:ring-2 focus:ring-pine-200"
+                    />
+                    <textarea
+                      value={draftContent}
+                      onChange={(e) => setDraftContent(e.target.value)}
+                      rows={6}
+                      maxLength={5000}
+                      className="w-full resize-y rounded-xl border border-pine-900/10 bg-white/90 p-3 text-sm leading-relaxed text-ink focus:border-pine-500 focus:outline-none focus:ring-2 focus:ring-pine-200"
+                    />
+                    <select
+                      value={draftCategory ?? ''}
+                      onChange={(e) =>
+                        setDraftCategory(
+                          e.target.value ? (e.target.value as CommunityCategory) : null,
+                        )
+                      }
+                      className="w-full rounded-xl border border-pine-900/10 bg-white/90 px-3 py-2 text-sm text-ink focus:border-pine-500 focus:outline-none focus:ring-2 focus:ring-pine-200"
+                    >
+                      <option value="">Uncategorized</option>
+                      {COMMUNITY_CATEGORIES.map((cat) => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.label}
+                        </option>
+                      ))}
+                    </select>
+                    {editError ? (
+                      <p className="rounded-xl bg-clay-soft px-3 py-2 text-xs font-semibold text-clay">
+                        {editError}
+                      </p>
+                    ) : null}
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        onClick={() => void saveEdit()}
+                        disabled={savingEdit || !draftContent.trim()}
+                      >
+                        {savingEdit ? 'Saving…' : 'Save changes'}
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={cancelEdit}
+                        disabled={savingEdit}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {post.title ? (
+                      <h1 className="mt-3 font-display text-2xl font-semibold leading-tight text-pine-950 sm:text-[1.9rem]">
+                        {post.title}
+                      </h1>
+                    ) : null}
 
-                <p className="mt-3 whitespace-pre-line text-[0.95rem] leading-[1.75] text-ink/90">
-                  {post.content}
-                </p>
+                    <p className="mt-3 whitespace-pre-line text-[0.95rem] leading-[1.75] text-ink/90">
+                      {post.content}
+                    </p>
+                  </>
+                )}
 
                 {/* Supportive reactions */}
                 <div className="mt-6 border-t border-pine-900/8 pt-4">
@@ -205,22 +315,34 @@ export function CommunityPostPage() {
                   </span>
 
                   {post.isMine ? (
-                    <Button
-                      variant="danger"
-                      size="sm"
-                      onClick={() => void remove()}
-                      disabled={deleting}
-                    >
-                      {deleting ? (
-                        <Loader2
-                          className="h-3.5 w-3.5 animate-spin"
-                          aria-hidden="true"
-                        />
-                      ) : (
-                        <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
-                      )}
-                      {deleting ? 'Deleting…' : 'Delete my post'}
-                    </Button>
+                    <div className="flex flex-wrap gap-2">
+                      {!editing ? (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={startEdit}
+                        >
+                          <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+                          Edit
+                        </Button>
+                      ) : null}
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={() => void remove()}
+                        disabled={deleting || editing}
+                      >
+                        {deleting ? (
+                          <Loader2
+                            className="h-3.5 w-3.5 animate-spin"
+                            aria-hidden="true"
+                          />
+                        ) : (
+                          <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                        )}
+                        {deleting ? 'Deleting…' : 'Delete my post'}
+                      </Button>
+                    </div>
                   ) : (
                     <Button
                       variant="secondary"

@@ -248,6 +248,7 @@ export interface CommunityReply {
   postId: string;
   content: string;
   createdAt: number;
+  updatedAt?: number;
   isMine: boolean;
   reactionCounts?: Record<string, number>;
   myReactions?: string[];

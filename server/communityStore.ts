@@ -39,6 +39,8 @@ import { getCommunityFirestore } from './firebaseAdmin.ts';
 import type {
   CreatePostInput,
   CreateReplyInput,
+  EditPostInput,
+  EditReplyInput,
   ReportPostInput,
 } from './communityValidation.ts';
 
@@ -214,6 +216,7 @@ function toPublicReply(
     postId: readString(data.postId),
     content: readString(data.content),
     createdAt: timestampMillis(data.createdAt),
+    updatedAt: timestampMillis(data.updatedAt) || undefined,
     isMine: data.authorId === uid,
     reactionCounts: readReplyReactionCounts(data.reactionCounts),
     myReactions,
@@ -618,6 +621,86 @@ export async function createReply(
     myReactions: [],
     isMine: true,
   };
+}
+
+/** Updates an owned visible post's content and re-applies moderation state. */
+export async function editPost(
+  uid: string,
+  input: EditPostInput,
+  moderation: {
+    riskLevel: RiskLevel;
+    needsReview: boolean;
+  },
+): Promise<CommunityPost> {
+  const db = getCommunityFirestore();
+  const ref = db.collection(POSTS).doc(input.postId);
+  const now = Timestamp.now();
+
+  await db.runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(ref);
+    if (!snapshot.exists) {
+      throw new CommunityNotFoundError();
+    }
+    const data = snapshot.data() as CommunityPostDoc;
+    if (data.authorId !== uid) {
+      throw new CommunityNotFoundError();
+    }
+    if (readStatus(data.status) !== 'visible') {
+      throw new CommunityNotFoundError();
+    }
+
+    transaction.update(ref, {
+      title: input.title,
+      content: input.content,
+      category: input.category,
+      riskLevel: moderation.riskLevel,
+      needsReview: moderation.needsReview,
+      updatedAt: now,
+    });
+  });
+
+  const snapshot = await ref.get();
+  const data = snapshot.data() as CommunityPostDoc;
+  return toPublicPost(snapshot.id, data, uid, []);
+}
+
+/** Updates an owned visible reply's content and re-applies moderation state. */
+export async function editReply(
+  uid: string,
+  input: EditReplyInput,
+  moderation: {
+    riskLevel: RiskLevel;
+    needsReview: boolean;
+  },
+): Promise<CommunityReply> {
+  const db = getCommunityFirestore();
+  const ref = db.collection(REPLIES).doc(input.replyId);
+  const now = Timestamp.now();
+
+  await db.runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(ref);
+    if (!snapshot.exists) {
+      throw new CommunityNotFoundError();
+    }
+    const data = snapshot.data() as CommunityReplyDoc;
+    if (data.authorId !== uid) {
+      throw new CommunityNotFoundError();
+    }
+    if (readStatus(data.status) !== 'visible') {
+      throw new CommunityNotFoundError();
+    }
+
+    transaction.update(ref, {
+      content: input.content,
+      riskLevel: moderation.riskLevel,
+      needsReview: moderation.needsReview,
+      updatedAt: now,
+    });
+  });
+
+  const snapshot = await ref.get();
+  const data = snapshot.data() as CommunityReplyDoc;
+  return toPublicReply(snapshot.id, data, uid, []);
 }
 
 /** Lists visible replies for a readable post using a value-based cursor. */

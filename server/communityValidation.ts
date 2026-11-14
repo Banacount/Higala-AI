@@ -26,6 +26,18 @@ export interface CreateReplyInput {
   content: string;
 }
 
+export interface EditPostInput {
+  postId: string;
+  title: string;
+  content: string;
+  category: CommunityCategory | null;
+}
+
+export interface EditReplyInput {
+  replyId: string;
+  content: string;
+}
+
 export interface ToggleReactionInput {
   postId: string;
   reaction: CommunityReaction;
@@ -127,6 +139,47 @@ export function parseCreateReply(body: unknown): CreateReplyInput {
   }
 
   return { postId, content };
+}
+
+export function parseEditPost(body: unknown): EditPostInput {
+  const record = asRecord(body);
+  const postId = parsePostId(record.postId);
+  const title = optionalText(record.title, COMMUNITY_LIMITS.title, 'Title');
+  const content = optionalText(
+    record.content,
+    COMMUNITY_LIMITS.content,
+    'Your post',
+  );
+
+  if (!content) {
+    throw new CommunityError('Write something before posting.');
+  }
+
+  let category: CommunityCategory | null = null;
+  if (record.category !== undefined && record.category !== null && record.category !== '') {
+    if (!isCommunityCategory(record.category)) {
+      throw new CommunityError('Choose a valid category.');
+    }
+    category = record.category;
+  }
+
+  return { postId, title, content, category };
+}
+
+export function parseEditReply(body: unknown): EditReplyInput {
+  const record = asRecord(body);
+  const replyId = parseReplyId(record.replyId ?? record.id);
+  const content = optionalText(
+    record.content,
+    COMMUNITY_LIMITS.replyContent,
+    'Your reply',
+  );
+
+  if (!content) {
+    throw new CommunityError('Write something before replying.');
+  }
+
+  return { replyId, content };
 }
 
 /** Parses and validates a request to toggle a post reaction. */
