@@ -279,6 +279,27 @@ export function reportPost(
   );
 }
 
+export function reportReply(
+  input: {
+    postId: string;
+    replyId: string;
+    reason: CommunityReportReason;
+    description: string;
+  },
+  token: string,
+): Promise<{ ok: true }> {
+  return communityPost(
+    {
+      action: 'report-reply',
+      postId: input.postId,
+      replyId: input.replyId,
+      reason: input.reason,
+      description: input.description,
+    },
+    token,
+  );
+}
+
 /** Records the current user's acceptance of the community guidelines. */
 export function acceptGuidelines(
   token: string,

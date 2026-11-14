@@ -55,6 +55,13 @@ export interface ReportPostInput {
   description: string;
 }
 
+export interface ReportReplyInput {
+  postId: string;
+  replyId: string;
+  reason: CommunityReportReason;
+  description: string;
+}
+
 export interface ModerateReplyInput {
   postId: string;
   replyId: string;
@@ -230,6 +237,21 @@ export function parseReportPost(body: unknown): ReportPostInput {
     'Details',
   );
   return { postId, reason: record.reason, description };
+}
+
+export function parseReportReply(body: unknown): ReportReplyInput {
+  const record = asRecord(body);
+  const postId = parsePostId(record.postId);
+  const replyId = parseReplyId(record.replyId);
+  if (!isCommunityReportReason(record.reason)) {
+    throw new CommunityError('Choose a valid report reason.');
+  }
+  const description = optionalText(
+    record.description,
+    COMMUNITY_LIMITS.reportDescription,
+    'Details',
+  );
+  return { postId, replyId, reason: record.reason, description };
 }
 
 /** Parses and validates a moderation action for a reply. */

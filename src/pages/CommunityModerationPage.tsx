@@ -20,6 +20,7 @@ import { CommunityAuthGate } from '@/components/community/CommunityAuthGate';
 import { useAuth } from '@/context/AuthContext';
 import {
   CommunityApiError,
+  deleteReply as deleteReplyRequest,
   getModerationQueue,
   moderatePost,
   moderateReply,
@@ -259,6 +260,33 @@ export function CommunityModerationPage() {
     } finally {
       setBusyId(null);
     }
+  };
+
+  const requestDeleteReply = (replyId: string) => {
+    if (
+      !window.confirm(
+        'Delete this reply? It will be removed from the discussion and cannot be restored.',
+      )
+    ) {
+      return;
+    }
+    void (async () => {
+      setBusyId(replyId);
+      setError(null);
+      try {
+        const token = await getIdToken();
+        await deleteReplyRequest(replyId, token);
+        await load();
+      } catch (cause) {
+        setError(
+          cause instanceof Error
+            ? cause.message
+            : 'The reply could not be deleted.',
+        );
+      } finally {
+        setBusyId(null);
+      }
+    })();
   };
 
   return (
@@ -517,6 +545,15 @@ export function CommunityModerationPage() {
                                 >
                                   <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                                   Reject
+                                </Button>
+                                <Button
+                                  variant="danger"
+                                  size="sm"
+                                  disabled={busyId === reply.id}
+                                  onClick={() => requestDeleteReply(reply.id)}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                                  Delete
                                 </Button>
                               </>
                             ) : null}

@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import {
   AlertCircle,
+  Flag,
   HeartHandshake,
   Loader2,
   MessageCircle,
@@ -11,6 +12,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { CrisisSupportNote } from '@/components/community/CrisisSupportNote';
+import { ReportDialog } from '@/components/community/ReportDialog';
 import { CommunityGuidelinesModal } from '@/components/community/CommunityGuidelinesModal';
 import { ReplyEmojiReactions } from '@/components/community/ReplyEmojiReactions';
 import { useAuth } from '@/context/AuthContext';
@@ -64,6 +66,7 @@ export function CommunityRepliesSection({
   const [editContent, setEditContent] = useState('');
   const [savingEditId, setSavingEditId] = useState<string | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
+  const [reportingId, setReportingId] = useState<string | null>(null);
 
   /** Publishes the composed reply, handling review and guidelines states. */
   const submitReply = async (tokenOverride?: string) => {
@@ -504,7 +507,17 @@ export function CommunityRepliesSection({
                         {isDeleting ? 'Deleting…' : 'Delete'}
                       </Button>
                     </div>
-                  ) : null}
+                  ) : (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setReportingId(reply.id)}
+                      className="ml-auto text-xs"
+                    >
+                      <Flag className="h-3 w-3" aria-hidden="true" />
+                      Report
+                    </Button>
+                  )}
                 </div>
               </article>
             );
@@ -527,6 +540,15 @@ export function CommunityRepliesSection({
           ) : null}
         </div>
       )}
+
+      {reportingId ? (
+        <ReportDialog
+          open={true}
+          postId={postId}
+          replyId={reportingId}
+          onClose={() => setReportingId(null)}
+        />
+      ) : null}
     </section>
   );
 }

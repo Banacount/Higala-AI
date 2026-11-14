@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
 import { CheckCircle2, Flag } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { reportPost as reportPostRequest } from '@/lib/communityClient';
+import {
+  reportPost as reportPostRequest,
+  reportReply as reportReplyRequest,
+} from '@/lib/communityClient';
 import {
   COMMUNITY_REPORT_REASONS,
   type CommunityReportReason,
@@ -12,11 +15,13 @@ import { Button } from '@/components/ui/Button';
 export function ReportDialog({
   open,
   postId,
+  replyId,
   onClose,
   onReported,
 }: {
   open: boolean;
   postId: string;
+  replyId?: string;
   onClose: () => void;
   onReported?: () => void;
 }) {
@@ -41,10 +46,17 @@ export function ReportDialog({
     setError(null);
     try {
       const token = await getIdToken();
-      await reportPostRequest(
-        { postId, reason, description: description.trim() },
-        token,
-      );
+      if (replyId) {
+        await reportReplyRequest(
+          { postId, replyId, reason, description: description.trim() },
+          token,
+        );
+      } else {
+        await reportPostRequest(
+          { postId, reason, description: description.trim() },
+          token,
+        );
+      }
       setSubmitted(true);
       onReported?.();
     } catch (cause) {
@@ -63,7 +75,13 @@ export function ReportDialog({
       open={open}
       onClose={onClose}
       eyebrow="Community safety"
-      title={submitted ? 'Report received' : 'Report this post'}
+      title={
+        submitted
+          ? 'Report received'
+          : replyId
+            ? 'Report this reply'
+            : 'Report this post'
+      }
       description={
         submitted
           ? 'Thank you for looking out for the community. A moderator will review this.'
@@ -105,7 +123,7 @@ export function ReportDialog({
         <div className="space-y-4">
           <fieldset>
             <legend className="text-[0.64rem] font-extrabold uppercase tracking-[0.16em] text-pine-700">
-              What is wrong with this post?
+              {replyId ? 'What is wrong with this reply?' : 'What is wrong with this post?'}
             </legend>
             <div className="mt-2 space-y-2">
               {COMMUNITY_REPORT_REASONS.map((option) => (
