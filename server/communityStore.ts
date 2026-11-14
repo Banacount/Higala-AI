@@ -42,6 +42,7 @@ import type {
   EditPostInput,
   EditReplyInput,
   ReportPostInput,
+  ReportReplyInput,
 } from './communityValidation.ts';
 
 const POSTS = 'communityPosts';
@@ -802,7 +803,11 @@ async function deleteReplyReactionsForReply(
 }
 
 /** Soft-deletes an owned reply, adjusts the parent count, then cleans up reactions. */
-export async function deleteReply(uid: string, replyId: string): Promise<void> {
+export async function deleteReply(
+  uid: string,
+  replyId: string,
+  isAdmin = false,
+): Promise<void> {
   const db = getCommunityFirestore();
   const replyRef = db.collection(REPLIES).doc(replyId);
 
@@ -812,7 +817,7 @@ export async function deleteReply(uid: string, replyId: string): Promise<void> {
       throw new CommunityNotFoundError();
     }
     const data = snapshot.data() as CommunityReplyDoc;
-    if (data.authorId !== uid) {
+    if (!isAdmin && data.authorId !== uid) {
       // Do not reveal whether someone else's reply exists.
       throw new CommunityNotFoundError();
     }
@@ -1360,6 +1365,63 @@ export async function reportPost(
     transaction.update(postRef, {
       reportCount,
       needsReview: post.needsReview === true || reportCount >= 3,
+      updatedAt: now,
+    });
+  });
+}
+
+/** Reports a reply, marking it for moderator review. */
+export async function reportReply(
+  uid: string,
+  input: ReportReplyInput,
+): Promise<void> {
+  const db = getCommunityFirestore();
+  await enforceRateLimit(db, uid, 'report');
+
+  const replyRef = db.collection(REPLIES).doc(input.replyId);
+  const reportRef = db
+    .collection(REPORTS)
+    .doc(`${input.replyId}_${uid}`);
+
+  await db.runTransaction(async (transaction) => {
+    const replySnapshot = await transaction.get(replyRef);
+    if (!replySnapshot.exists) {
+      throw new CommunityNotFoundError();
+    }
+    const reply = replySnapshot.data() as CommunityReplyDoc;
+    if (readString(reply.postId) !== input.postId) {
+      throw new CommunityNotFoundError();
+    }
+    if (readStatus(reply.status) !== 'visible') {
+      throw new CommunityNotFoundError();
+    }
+    if (reply.authorId === uid) {
+      throw new CommunityError("You can't report your own reply.");
+    }
+
+    const reportSnapshot = await transaction.get(reportRef);
+    if (reportSnapshot.exists && reportSnapshot.data()?.status === 'open') {
+      throw new CommunityConflictError(
+        'You already reported this reply. A moderator will review it.',
+        'already_reported',
+      );
+    }
+
+    const now = Timestamp.now();
+    transaction.set(reportRef, {
+      reporterId: uid,
+      targetType: 'reply',
+      postId: input.postId,
+      targetId: input.replyId,
+      reason: input.reason,
+      description: input.description,
+      status: 'open',
+      createdAt: now,
+      reviewedAt: null,
+    });
+
+    transaction.update(replyRef, {
+      needsReview: true,
       updatedAt: now,
     });
   });

@@ -25,6 +25,7 @@ import {
   moderatePost,
   moderateReply,
   reportPost,
+  reportReply,
   toggleReaction,
   toggleReplyReaction,
 } from './communityStore.ts';
@@ -42,6 +43,7 @@ import {
   parseRepliesQuery,
   parseReplyId,
   parseReportPost,
+  parseReportReply,
   parseResource,
   parseToggleReaction,
   parseToggleReplyReaction,
@@ -272,13 +274,19 @@ export async function handleCommunity(
 
       case 'delete-reply': {
         const replyId = parseReplyId(body.replyId ?? body.id);
-        await deleteReply(identity.uid, replyId);
+        await deleteReply(identity.uid, replyId, identity.isAdmin);
         return ok({ ok: true });
       }
 
       case 'report-post': {
         const input = parseReportPost(body);
         await reportPost(identity.uid, input);
+        return ok({ ok: true });
+      }
+
+      case 'report-reply': {
+        const input = parseReportReply(body);
+        await reportReply(identity.uid, input);
         return ok({ ok: true });
       }
 
