@@ -135,7 +135,7 @@ export function ChatPage() {
               title={
                 mode === 'friendly'
                   ? 'Friendly mode: warm and casual'
-                  : 'Honest mode: direct and serious'
+                  : 'Honest mode: direct, serious, and compassionate'
               }
               className="flex h-8 items-center gap-1 rounded-full border border-pine-900/10 bg-white/60 px-2.5 text-[0.62rem] font-bold uppercase tracking-[0.08em] text-pine-800 transition hover:bg-white"
             >

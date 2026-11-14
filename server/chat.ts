@@ -237,7 +237,7 @@ async function generateOnce(
           message: {
             type: Type.STRING,
             description:
-              'The natural friend-like reply. Usually one to four sentences; longer only when the moment genuinely needs room. No headings or bullet lists in ordinary conversation. Not every reply ends with a question.',
+              'The natural reply in the selected mode. Usually one to four sentences; longer only when the moment genuinely needs room. No headings or bullet lists in ordinary conversation. Not every reply ends with a question.',
           },
           challenge: {
             type: Type.STRING,
