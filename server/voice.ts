@@ -9,7 +9,6 @@ import {
 import {
   ChatValidationError,
   DEFAULT_MODEL,
-  FALLBACK_MODEL,
   MAX_MESSAGE_CHARS,
   MAX_TOTAL_CHARS,
   handleChat,
@@ -33,6 +32,10 @@ import {
 
 export { MAX_VOICE_AUDIO_BYTES };
 
+/** Dedicated speech-to-text model: lower latency and better dialect coverage. */
+export const TRANSCRIBE_MODEL = 'gemini-3.5-transcribe';
+const TRANSCRIBE_FALLBACK_MODEL = DEFAULT_MODEL;
+
 const MIN_VOICE_AUDIO_BYTES = 512;
 const MAX_VOICE_RECORDING_MS = 120_000;
 const MAX_VOICE_HISTORY = 16;
@@ -45,6 +48,18 @@ const LANGUAGE_NAMES: Record<Language, string> = {
   ceb: 'Cebuano/Bisaya (Cagayan de Oro / Northern Mindanao)',
   fil: 'Filipino/Tagalog',
   en: 'English',
+};
+
+/**
+ * Hints for the transcribe model, most likely language first. Listing all
+ * three keeps Bisaya/Tagalog code-switching intact instead of forcing the
+ * whole clip into one language. The model still detects the spoken language,
+ * so the selector is only a prior, never a hard constraint.
+ */
+const LANGUAGE_HINTS: Record<Language, string[]> = {
+  ceb: ['ceb', 'fil-PH', 'en-US'],
+  fil: ['fil-PH', 'ceb', 'en-US'],
+  en: ['en-US', 'fil-PH', 'ceb'],
 };
 
 const TRANSCRIPTION_PROMPT = `Transcribe the speech in this audio message.
@@ -65,6 +80,11 @@ export class VoiceUnavailableError extends Error {
     super(message);
     this.name = 'VoiceUnavailableError';
   }
+}
+
+export interface VoiceHandlerOptions extends ChatHandlerOptions {
+  /** Optional override for the dedicated speech-to-text model. */
+  transcribeModel?: string;
 }
 
 interface SupportedAudioFormat {
@@ -252,7 +272,67 @@ function wait(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function transcribeOnce(
+async function withRetries<T>(run: () => Promise<T>): Promise<T> {
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS_PER_MODEL; attempt += 1) {
+    try {
+      return await run();
+    } catch (error) {
+      lastError = error;
+      if (attempt === MAX_ATTEMPTS_PER_MODEL || !isRetryable(error)) {
+        throw error;
+      }
+      await wait(RETRY_DELAY_MS * attempt);
+    }
+  }
+
+  throw lastError;
+}
+
+/**
+ * Primary path: the dedicated ASR model, which is faster than a general chat
+ * model and has explicit Cebuano (`ceb`) and Filipino (`fil-PH`) coverage.
+ */
+async function transcribeWithDedicatedModel(
+  ai: GoogleGenAI,
+  model: string,
+  audio: ValidatedAudio,
+  language: Language,
+): Promise<string> {
+  const response = await ai.interactions.create({
+    model,
+    input: [
+      {
+        type: 'audio',
+        data: audio.data.toString('base64'),
+        mime_type: audio.mimeType,
+      },
+    ],
+    generation_config: {
+      transcription_config: {
+        // Hints, not a hard constraint: the model still detects the spoken
+        // language and preserves intra-sentence code-switching.
+        language_codes: LANGUAGE_HINTS[language],
+        mode: 'verbatim',
+      },
+    },
+    // Voice recordings are transient; do not retain them for later retrieval.
+    store: false,
+  });
+
+  if (response.status !== 'completed') {
+    throw new Error(`Transcription did not complete (${response.status}).`);
+  }
+
+  return cleanTranscript(response.output_text ?? '');
+}
+
+/**
+ * Fallback for environments where the dedicated model is unavailable. It is
+ * slower, but keeps voice messages working instead of failing outright.
+ */
+async function transcribeWithModel(
   ai: GoogleGenAI,
   model: string,
   audio: ValidatedAudio,
@@ -270,6 +350,8 @@ async function transcribeOnce(
       temperature: 0.1,
       maxOutputTokens: MAX_TRANSCRIPT_OUTPUT_TOKENS,
       thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL },
+      // Voice content is sensitive; opt out of request/response logging.
+      store: false,
       // Crisis language must reach the safety pipeline instead of being
       // silently dropped by the transcription model.
       safetySettings: [
@@ -299,7 +381,7 @@ async function transcribeOnce(
 async function transcribe(
   audio: ValidatedAudio,
   language: Language,
-  options: ChatHandlerOptions,
+  options: VoiceHandlerOptions,
 ): Promise<string> {
   if (!options.apiKey) {
     throw new VoiceUnavailableError(
@@ -307,33 +389,36 @@ async function transcribe(
     );
   }
 
-  const configuredModel = options.model?.trim() || DEFAULT_MODEL;
-  const models =
-    configuredModel === FALLBACK_MODEL
-      ? [configuredModel]
-      : [configuredModel, FALLBACK_MODEL];
-  const ai = new GoogleGenAI({ apiKey: options.apiKey });
+  const dedicatedModel = options.transcribeModel?.trim() || TRANSCRIBE_MODEL;
+  // The Interactions API (used by gemini-3.5-transcribe) is served from
+  // v1beta; the SDK defaults to v1 for the Gemini API.
+  const ai = new GoogleGenAI({
+    apiKey: options.apiKey,
+    httpOptions: { apiVersion: 'v1beta' },
+  });
 
-  for (const model of models) {
-    for (let attempt = 1; attempt <= MAX_ATTEMPTS_PER_MODEL; attempt += 1) {
-      try {
-        return await transcribeOnce(ai, model, audio, language);
-      } catch (error) {
-        // Never log the audio bytes or the transcript. The model name and
-        // provider error are enough to diagnose a failure.
-        console.error(
-          `[higala] Gemini voice transcription failed (${model}):`,
-          errorMessage(error),
-        );
-        if (
-          attempt === MAX_ATTEMPTS_PER_MODEL ||
-          !isRetryable(error)
-        ) {
-          break;
-        }
-        await wait(RETRY_DELAY_MS * attempt);
-      }
-    }
+  try {
+    return await withRetries(() =>
+      transcribeWithDedicatedModel(ai, dedicatedModel, audio, language),
+    );
+  } catch (error) {
+    // Never log the audio bytes or the transcript. The model name and
+    // provider error are enough to diagnose a failure.
+    console.error(
+      `[higala] Gemini transcription failed (${dedicatedModel}); falling back to ${TRANSCRIBE_FALLBACK_MODEL}:`,
+      errorMessage(error),
+    );
+  }
+
+  try {
+    return await withRetries(() =>
+      transcribeWithModel(ai, TRANSCRIBE_FALLBACK_MODEL, audio, language),
+    );
+  } catch (error) {
+    console.error(
+      `[higala] Gemini transcription fallback failed (${TRANSCRIBE_FALLBACK_MODEL}):`,
+      errorMessage(error),
+    );
   }
 
   throw new VoiceUnavailableError(
@@ -343,7 +428,7 @@ async function transcribe(
 
 export async function handleVoiceChat(
   form: MultipartForm,
-  options: ChatHandlerOptions = {},
+  options: VoiceHandlerOptions = {},
 ): Promise<ChatVoiceApiResponse> {
   const audioFile = form.files.find((file) => file.field === 'audio');
   if (!audioFile) {
