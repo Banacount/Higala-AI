@@ -15,6 +15,8 @@ import {
   deleteMyCommunityData,
   deletePost,
   deleteReply,
+  editPost,
+  editReply,
   getMember,
   getModerationQueue,
   getPost,
@@ -30,6 +32,8 @@ import {
   parseAction,
   parseCreatePost,
   parseCreateReply,
+  parseEditPost,
+  parseEditReply,
   parseFeedQuery,
   parseModeratePost,
   parseModerateReply,
@@ -190,6 +194,52 @@ export async function handleCommunity(
           },
           201,
         );
+      }
+
+      case 'edit-post': {
+        const input = parseEditPost(body);
+        const screen = screenCommunityContent(
+          `${input.title}\\n${input.content}`,
+        );
+
+        if (screen.blockReasons.length > 0) {
+          throw new CommunityError(
+            `This post was not updated because it appears to contain ${screen.blockReasons.join(
+              ' and ',
+            )}. If you are dealing with a crisis, please use the support resources instead of posting a threat.`,
+            422,
+            'content_blocked',
+          );
+        }
+
+        const post = await editPost(identity.uid, input, {
+          riskLevel: screen.riskLevel,
+          needsReview: needsModeratorReview(screen),
+        });
+
+        return ok({ post });
+      }
+
+      case 'edit-reply': {
+        const input = parseEditReply(body);
+        const screen = screenCommunityContent(input.content);
+
+        if (screen.blockReasons.length > 0) {
+          throw new CommunityError(
+            `This reply was not updated because it appears to contain ${screen.blockReasons.join(
+              ' and ',
+            )}. If you are dealing with a crisis, please use the support resources instead of posting a threat.`,
+            422,
+            'content_blocked',
+          );
+        }
+
+        const reply = await editReply(identity.uid, input, {
+          riskLevel: screen.riskLevel,
+          needsReview: needsModeratorReview(screen),
+        });
+
+        return ok({ reply });
       }
 
       case 'toggle-reaction': {
