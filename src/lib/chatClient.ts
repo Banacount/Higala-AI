@@ -11,6 +11,7 @@ export interface ChatRequestPayload {
   messages: ChatTurn[];
   language: Language;
   riskLevel: RiskLevel;
+  mode?: 'friendly' | 'honest';
 }
 
 const MAX_TURNS = 16;
@@ -48,11 +49,13 @@ export async function requestChat(
   messages: ChatMessage[],
   language: Language,
   riskLevel: RiskLevel,
+  mode: 'friendly' | 'honest' = 'friendly',
 ): Promise<ChatApiResponse> {
   const payload: ChatRequestPayload = {
     messages: toChatTurns(messages),
     language,
     riskLevel,
+    mode,
   };
 
   const response = await fetch('/api/chat', {
@@ -71,6 +74,7 @@ export async function requestVoiceChat(
   language: Language,
   riskLevel: RiskLevel,
   durationMs: number,
+  mode: 'friendly' | 'honest' = 'friendly',
 ): Promise<ChatVoiceApiResponse> {
   // Multipart avoids base64 inflation and keeps the audio a single in-memory
   // copy on both sides.
@@ -80,6 +84,7 @@ export async function requestVoiceChat(
   body.append('language', language);
   body.append('riskLevel', riskLevel);
   body.append('durationMs', String(Math.max(0, Math.round(durationMs))));
+  body.append('mode', mode);
 
   const response = await fetch('/api/voice-chat', {
     method: 'POST',

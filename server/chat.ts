@@ -99,10 +99,16 @@ export function validateChatRequest(payload: unknown): ChatApiRequest {
     ? record.riskLevel
     : 'none';
 
+  const mode =
+    record.mode === 'honest' || record.mode === 'friendly'
+      ? record.mode
+      : 'friendly';
+
   return {
     messages,
     language: record.language,
     riskLevel,
+    mode,
   };
 }
 
@@ -212,7 +218,11 @@ async function generateOnce(
     model,
     contents: toGeminiContents(request.messages),
     config: {
-      systemInstruction: buildSystemPrompt(request.language, riskLevel),
+      systemInstruction: buildSystemPrompt(
+        request.language,
+        riskLevel,
+        request.mode ?? 'friendly',
+      ),
       temperature: 0.85,
       maxOutputTokens: MAX_OUTPUT_TOKENS,
       // Gemini 3.5 supports thinking levels; minimal keeps chat replies fast
